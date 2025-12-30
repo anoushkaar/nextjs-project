@@ -10,14 +10,14 @@ export default function Home() {
   const reset = () => setCount(0);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900">
       <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-12 shadow-2xl border border-white/20">
         <h1 className="text-5xl font-bold text-white mb-8 text-center tracking-tight">
           Counter App
         </h1>
 
         {/* Display */}
-        <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-8 mb-8 shadow-lg">
+        <div className="bg-purple-600 rounded-2xl p-8 mb-8 shadow-lg">
           <p className="text-white/80 text-sm uppercase tracking-widest mb-2 text-center">
             Current Value
           </p>
@@ -29,14 +29,14 @@ export default function Home() {
         {/* Main Controls */}
         <div className="flex gap-4 mb-6">
           <button
-            className="flex-1 px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="flex-1 px-8 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             onClick={() => decrement(1)}
             disabled={count === 0}
           >
             − Decrement
           </button>
           <button
-            className="flex-1 px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+            className="flex-1 px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
             onClick={() => increment(1)}
           >
             + Increment
