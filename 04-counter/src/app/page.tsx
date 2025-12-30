@@ -17,7 +17,7 @@ export default function Home() {
         </button>
         <button
           className="px-4 py-2 bg-gray-200 text-black rounded hover:bg-slate-400 transition"
-          onClick={() => setCount(count > 0 ? count - 1 : 0)}
+          onClick={() => setCount(count > 0 ? count - 1 : 0)} // if count is 0, do not decrement if greater than 0, decrement
         >
           Decrement
         </button>
