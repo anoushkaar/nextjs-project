@@ -90,13 +90,16 @@ export default function Home() {
   }, [count, playSound]);
 
   const undo = useCallback(() => {
-    if (history.length > 0) {
-      const lastValue = history[history.length - 1];
-      setHistory((h) => h.slice(0, -1));
-      setCount(lastValue);
-      playSound(500, 200);
-    }
-  }, [history, playSound]);
+    setHistory((currentHistory) => {
+      if (currentHistory.length > 0) {
+        const lastValue = currentHistory[currentHistory.length - 1];
+        setCount(lastValue);
+        playSound(500, 200);
+        return currentHistory.slice(0, -1);
+      }
+      return currentHistory;
+    });
+  }, [playSound]);
 
   // Keyboard shortcuts
   useEffect(() => {
