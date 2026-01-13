@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const questions = [
+interface Question {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
+const originalQuestions: Question[] = [
   {
     question: "What is the capital of France?",
     options: ["London", "Berlin", "Paris", "Madrid"],
@@ -30,26 +36,64 @@ const questions = [
   },
 ];
 
+function shuffle(array: Question[]): Question[] {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 export default function Home() {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    setQuestions(shuffle([...originalQuestions]));
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft > 0 && !showResults) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && !showResults) {
+      setFeedback("Time's up!");
+      setTimeout(() => setFeedback(""), 1000);
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setTimeLeft(30);
+      } else {
+        setShowResults(true);
+      }
+    }
+  }, [timeLeft, currentQuestion, showResults, questions.length]);
 
   const handleAnswer = (selected: string) => {
-    if (selected === questions[currentQuestion].answer) {
+    const isCorrect = selected === questions[currentQuestion]?.answer;
+    if (isCorrect) {
       setScore(score + 1);
     }
+    setFeedback(isCorrect ? "Correct!" : "Wrong!");
+    setTimeout(() => setFeedback(""), 1000);
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
+      setTimeLeft(30);
     } else {
       setShowResults(true);
     }
   };
 
   const restartQuiz = () => {
+    setQuestions(shuffle([...originalQuestions]));
     setCurrentQuestion(0);
     setScore(0);
     setShowResults(false);
+    setTimeLeft(30);
+    setFeedback("");
   };
 
   if (showResults) {
@@ -69,11 +113,28 @@ export default function Home() {
     );
   }
 
+  if (questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   const q = questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <h1 className="text-2xl font-bold mb-6">Quiz App</h1>
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <p className="text-sm text-gray-600 mb-2">Time left: {timeLeft}s</p>
+        <p className="text-lg font-bold text-center mb-2">{feedback}</p>
         <h2 className="text-xl mb-4">{q.question}</h2>
         <div className="space-y-2">
           {q.options.map((option, index) => (
