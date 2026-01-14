@@ -69,6 +69,15 @@ function shuffle(array: Question[]): Question[] {
   return array;
 }
 
+function shuffleStrings(array: string[]): string[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
 export default function Home() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -82,7 +91,7 @@ export default function Home() {
     setQuestions(
       shuffle([...originalQuestions]).map((q) => ({
         ...q,
-        options: shuffle([...q.options]),
+        options: shuffleStrings([...q.options]),
       }))
     );
   }, []);
@@ -134,7 +143,7 @@ export default function Home() {
     setQuestions(
       shuffle([...originalQuestions]).map((q) => ({
         ...q,
-        options: shuffle([...q.options]),
+        options: shuffleStrings([...q.options]),
       }))
     );
     setCurrentQuestion(0);
@@ -190,12 +199,21 @@ export default function Home() {
             <button
               key={index}
               onClick={() => handleAnswer(option)}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              disabled={answered}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {option}
             </button>
           ))}
         </div>
+        {answered && (
+          <button
+            onClick={nextQuestion}
+            className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition mt-4"
+          >
+            Next Question
+          </button>
+        )}
         <p className="mt-4 text-sm text-gray-600">
           Question {currentQuestion + 1} of {questions.length}
         </p>
