@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface Question {
   question: string;
@@ -34,6 +34,31 @@ const originalQuestions: Question[] = [
     options: ["Van Gogh", "Picasso", "Da Vinci", "Michelangelo"],
     answer: "Da Vinci",
   },
+  {
+    question: "What is the square root of 16?",
+    options: ["2", "4", "6", "8"],
+    answer: "4",
+  },
+  {
+    question: "Which gas do plants absorb from the atmosphere?",
+    options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"],
+    answer: "Carbon Dioxide",
+  },
+  {
+    question: "What is the chemical symbol for water?",
+    options: ["H2O", "CO2", "O2", "NaCl"],
+    answer: "H2O",
+  },
+  {
+    question: "Who wrote 'Romeo and Juliet'?",
+    options: ["Shakespeare", "Dickens", "Austen", "Hemingway"],
+    answer: "Shakespeare",
+  },
+  {
+    question: "What is the fastest land animal?",
+    options: ["Lion", "Cheetah", "Leopard", "Tiger"],
+    answer: "Cheetah",
+  },
 ];
 
 function shuffle(array: Question[]): Question[] {
@@ -51,34 +76,52 @@ export default function Home() {
   const [showResults, setShowResults] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [feedback, setFeedback] = useState("");
+  const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
-    setQuestions(shuffle([...originalQuestions]));
+    setQuestions(
+      shuffle([...originalQuestions]).map((q) => ({
+        ...q,
+        options: shuffle([...q.options]),
+      }))
+    );
   }, []);
 
   useEffect(() => {
-    if (timeLeft > 0 && !showResults) {
+    if (timeLeft > 0 && !showResults && !answered) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !showResults) {
-      setFeedback("Time's up!");
-      setTimeout(() => setFeedback(""), 1000);
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setTimeLeft(30);
-      } else {
-        setShowResults(true);
-      }
+    } else if (timeLeft === 0 && !showResults && !answered) {
+      setAnswered(true);
+      setFeedback(
+        "Time's up! Correct answer: " + questions[currentQuestion]?.answer
+      );
     }
-  }, [timeLeft, currentQuestion, showResults, questions.length]);
+  }, [
+    timeLeft,
+    currentQuestion,
+    showResults,
+    questions.length,
+    answered,
+    questions,
+  ]);
 
   const handleAnswer = (selected: string) => {
     const isCorrect = selected === questions[currentQuestion]?.answer;
     if (isCorrect) {
       setScore(score + 1);
+      setFeedback("Correct!");
+    } else {
+      setFeedback(
+        "Wrong! Correct answer: " + questions[currentQuestion]?.answer
+      );
     }
-    setFeedback(isCorrect ? "Correct!" : "Wrong!");
-    setTimeout(() => setFeedback(""), 1000);
+    setAnswered(true);
+  };
+
+  const nextQuestion = () => {
+    setAnswered(false);
+    setFeedback("");
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setTimeLeft(30);
@@ -88,12 +131,18 @@ export default function Home() {
   };
 
   const restartQuiz = () => {
-    setQuestions(shuffle([...originalQuestions]));
+    setQuestions(
+      shuffle([...originalQuestions]).map((q) => ({
+        ...q,
+        options: shuffle([...q.options]),
+      }))
+    );
     setCurrentQuestion(0);
     setScore(0);
     setShowResults(false);
     setTimeLeft(30);
     setFeedback("");
+    setAnswered(false);
   };
 
   if (showResults) {
