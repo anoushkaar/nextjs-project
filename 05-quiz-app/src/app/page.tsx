@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  CheckCircle,
+  Clock,
+  Lightbulb,
+  Play,
+  RotateCcw,
+  Trophy,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface Question {
@@ -191,34 +200,50 @@ export default function Home() {
 
   if (!quizStarted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-        <h1 className="text-3xl font-bold mb-4">Welcome to the Quiz App</h1>
-        <p className="text-lg mb-4">Test your knowledge with 10 questions!</p>
-        <p className="text-md mb-4">High Score: {highScore}</p>
-        <button
-          onClick={() => setQuizStarted(true)}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-        >
-          Start Quiz
-        </button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br bg-indigo-500">
+        <div className="bg-white bg-opacity-90 p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+          <h1 className="text-4xl font-bold mb-4 text-gray-800">
+            Welcome to the Quiz App
+          </h1>
+          <p className="text-lg mb-4 text-gray-600">
+            Test your knowledge with 10 questions!
+          </p>
+          <div className="flex items-center justify-center mb-4">
+            <Trophy className="text-yellow-500 mr-2" size={24} />
+            <p className="text-md text-gray-700">High Score: {highScore}</p>
+          </div>
+          <button
+            onClick={() => setQuizStarted(true)}
+            className="bg-blue-500 text-white px-6 py-3 rounded-full hover:bg-blue-600 transition duration-300 flex items-center justify-center mx-auto shadow-lg"
+          >
+            <Play className="mr-2" size={20} />
+            Start Quiz
+          </button>
+        </div>
       </div>
     );
   }
 
   if (showResults) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-        <h1 className="text-3xl font-bold mb-4">Quiz Completed!</h1>
-        <p className="text-xl mb-4">
-          Your score: {score} / {questions.length}
-        </p>
-        <p className="text-lg mb-4">High Score: {highScore}</p>
-        <button
-          onClick={restartQuiz}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-        >
-          Restart Quiz
-        </button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-600 p-4">
+        <div className="bg-white bg-opacity-90 p-8 rounded-2xl shadow-2xl w-full max-w-md text-center">
+          <Trophy className="text-yellow-500 mx-auto mb-4" size={48} />
+          <h1 className="text-3xl font-bold mb-4 text-gray-800">
+            Quiz Completed!
+          </h1>
+          <p className="text-xl mb-4 text-gray-700">
+            Your score: {score} / {questions.length}
+          </p>
+          <p className="text-lg mb-4 text-gray-600">High Score: {highScore}</p>
+          <button
+            onClick={restartQuiz}
+            className="bg-blue-500 text-white px-6 py-3 rounded-full hover:bg-blue-600 transition duration-300 flex items-center justify-center mx-auto shadow-lg"
+          >
+            <RotateCcw className="mr-2" size={20} />
+            Restart Quiz
+          </button>
+        </div>
       </div>
     );
   }
@@ -243,8 +268,22 @@ export default function Home() {
             style={{ width: `${progress}%` }}
           ></div>
         </div>
-        <p className="text-sm text-gray-600 mb-2">Time left: {timeLeft}s</p>
-        <p className="text-lg font-bold text-center mb-2">{feedback}</p>
+        <div className="flex items-center justify-center mb-2">
+          <Clock className="text-gray-600 mr-1" size={16} />
+          <p className="text-sm text-gray-600">Time left: {timeLeft}s</p>
+        </div>
+        <p className="text-lg font-bold text-center mb-2 flex items-center justify-center">
+          {feedback && (
+            <>
+              {feedback.includes("Correct") ? (
+                <CheckCircle className="text-green-500 mr-2" size={20} />
+              ) : (
+                <XCircle className="text-red-500 mr-2" size={20} />
+              )}
+              {feedback}
+            </>
+          )}
+        </p>
         <h2 className="text-xl mb-4">{q.question}</h2>
         <div className="space-y-2">
           {q.options.map((option, index) => (
@@ -269,8 +308,9 @@ export default function Home() {
         {!answered && hintsUsed < 1 && (
           <button
             onClick={hint}
-            className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition mt-4"
+            className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition mt-4 flex items-center justify-center"
           >
+            <Lightbulb className="mr-2" size={16} />
             Use Hint (Remove one wrong option)
           </button>
         )}
