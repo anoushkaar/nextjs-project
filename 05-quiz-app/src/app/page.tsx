@@ -86,6 +86,10 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [feedback, setFeedback] = useState("");
   const [answered, setAnswered] = useState(false);
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [highScore, setHighScore] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   useEffect(() => {
     setQuestions(
@@ -94,6 +98,11 @@ export default function Home() {
         options: shuffleStrings([...q.options]),
       }))
     );
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("quizHighScore");
+    if (saved) setHighScore(parseInt(saved));
   }, []);
 
   useEffect(() => {
@@ -116,6 +125,7 @@ export default function Home() {
   ]);
 
   const handleAnswer = (selected: string) => {
+    setSelectedAnswer(selected);
     const isCorrect = selected === questions[currentQuestion]?.answer;
     if (isCorrect) {
       setScore(score + 1);
@@ -128,14 +138,37 @@ export default function Home() {
     setAnswered(true);
   };
 
+  const hint = () => {
+    if (!answered && hintsUsed < 1) {
+      const q = questions[currentQuestion];
+      const wrongOptions = q.options.filter((o) => o !== q.answer);
+      const toRemove =
+        wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+      setQuestions((prev) => {
+        const newQs = [...prev];
+        newQs[currentQuestion].options = newQs[currentQuestion].options.filter(
+          (o) => o !== toRemove
+        );
+        return newQs;
+      });
+      setHintsUsed(hintsUsed + 1);
+    }
+  };
+
   const nextQuestion = () => {
     setAnswered(false);
     setFeedback("");
+    setSelectedAnswer(null);
+    setHintsUsed(0);
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setTimeLeft(30);
     } else {
       setShowResults(true);
+      if (score > highScore) {
+        setHighScore(score);
+        localStorage.setItem("quizHighScore", score.toString());
+      }
     }
   };
 
@@ -152,7 +185,25 @@ export default function Home() {
     setTimeLeft(30);
     setFeedback("");
     setAnswered(false);
+    setSelectedAnswer(null);
+    setHintsUsed(0);
   };
+
+  if (!quizStarted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <h1 className="text-3xl font-bold mb-4">Welcome to the Quiz App</h1>
+        <p className="text-lg mb-4">Test your knowledge with 10 questions!</p>
+        <p className="text-md mb-4">High Score: {highScore}</p>
+        <button
+          onClick={() => setQuizStarted(true)}
+          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+        >
+          Start Quiz
+        </button>
+      </div>
+    );
+  }
 
   if (showResults) {
     return (
@@ -161,6 +212,7 @@ export default function Home() {
         <p className="text-xl mb-4">
           Your score: {score} / {questions.length}
         </p>
+        <p className="text-lg mb-4">High Score: {highScore}</p>
         <button
           onClick={restartQuiz}
           className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
@@ -200,12 +252,28 @@ export default function Home() {
               key={index}
               onClick={() => handleAnswer(option)}
               disabled={answered}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full px-4 py-2 rounded transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                answered
+                  ? option === q.answer
+                    ? "bg-green-500 text-white"
+                    : option === selectedAnswer
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-300 text-gray-700"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
+              }`}
             >
               {option}
             </button>
           ))}
         </div>
+        {!answered && hintsUsed < 1 && (
+          <button
+            onClick={hint}
+            className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition mt-4"
+          >
+            Use Hint (Remove one wrong option)
+          </button>
+        )}
         {answered && (
           <button
             onClick={nextQuestion}
