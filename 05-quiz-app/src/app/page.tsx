@@ -23,6 +23,20 @@ interface Question {
   category?: string;
 }
 
+const categories = [
+  "Geography",
+  "Math",
+  "Science",
+  "Art",
+  "Literature",
+  "Nature",
+  "Technology",
+  "History",
+  "Sports",
+  "Music",
+  "Movies",
+];
+
 const originalQuestions: Question[] = [
   {
     question: "What is the capital of France?",
@@ -132,6 +146,131 @@ const originalQuestions: Question[] = [
     explanation: "Python was first released in 1991 by Guido van Rossum.",
     category: "Technology",
   },
+  // New questions
+  {
+    question: "Who was the first President of the United States?",
+    options: [
+      "Abraham Lincoln",
+      "George Washington",
+      "Thomas Jefferson",
+      "John Adams",
+    ],
+    answer: "George Washington",
+    explanation:
+      "George Washington was the first President, serving from 1789 to 1797.",
+    category: "History",
+  },
+  {
+    question: "Which country has won the most FIFA World Cups?",
+    options: ["Germany", "Argentina", "Brazil", "Italy"],
+    answer: "Brazil",
+    explanation: "Brazil has won the FIFA World Cup five times.",
+    category: "Sports",
+  },
+  {
+    question: "Who is known as the King of Pop?",
+    options: ["Elvis Presley", "Michael Jackson", "Prince", "Madonna"],
+    answer: "Michael Jackson",
+    explanation: "Michael Jackson is often called the King of Pop.",
+    category: "Music",
+  },
+  {
+    question: "Which movie features the character Darth Vader?",
+    options: ["Star Wars", "Star Trek", "The Matrix", "Lord of the Rings"],
+    answer: "Star Wars",
+    explanation: "Darth Vader is a character in the Star Wars franchise.",
+    category: "Movies",
+  },
+  {
+    question: "What is the capital of Australia?",
+    options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+    answer: "Canberra",
+    explanation: "Canberra is the capital city of Australia.",
+    category: "Geography",
+  },
+  {
+    question: "What is 15 divided by 3?",
+    options: ["3", "4", "5", "6"],
+    answer: "5",
+    explanation: "15 divided by 3 equals 5.",
+    category: "Math",
+  },
+  {
+    question: "Which vitamin is produced when skin is exposed to sunlight?",
+    options: ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"],
+    answer: "Vitamin D",
+    explanation:
+      "Vitamin D is synthesized in the skin upon exposure to ultraviolet light.",
+    category: "Science",
+  },
+  {
+    question: "Who painted 'The Starry Night'?",
+    options: ["Van Gogh", "Picasso", "Monet", "Dali"],
+    answer: "Van Gogh",
+    explanation: "Vincent van Gogh painted 'The Starry Night' in 1889.",
+    category: "Art",
+  },
+  {
+    question: "Who wrote 'Pride and Prejudice'?",
+    options: [
+      "Jane Austen",
+      "Emily Bronte",
+      "Charlotte Bronte",
+      "George Eliot",
+    ],
+    answer: "Jane Austen",
+    explanation: "Jane Austen wrote 'Pride and Prejudice' in 1813.",
+    category: "Literature",
+  },
+  {
+    question: "What is the largest mammal in the world?",
+    options: ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
+    answer: "Blue Whale",
+    explanation:
+      "The blue whale is the largest animal ever known to have lived.",
+    category: "Nature",
+  },
+  {
+    question: "What does HTML stand for?",
+    options: [
+      "HyperText Markup Language",
+      "High Tech Modern Language",
+      "Home Tool Markup Language",
+      "Hyperlink and Text Markup Language",
+    ],
+    answer: "HyperText Markup Language",
+    explanation:
+      "HTML stands for HyperText Markup Language, the standard markup language for web pages.",
+    category: "Technology",
+  },
+  {
+    question: "In which year did World War II end?",
+    options: ["1944", "1945", "1946", "1947"],
+    answer: "1945",
+    explanation: "World War II ended in 1945 with the surrender of Japan.",
+    category: "History",
+  },
+  {
+    question: "Which sport is known as 'America's Pastime'?",
+    options: ["Basketball", "Football", "Baseball", "Soccer"],
+    answer: "Baseball",
+    explanation: "Baseball is often called America's Pastime.",
+    category: "Sports",
+  },
+  {
+    question: "Who composed 'The Four Seasons'?",
+    options: ["Bach", "Mozart", "Vivaldi", "Beethoven"],
+    answer: "Vivaldi",
+    explanation: "Antonio Vivaldi composed 'The Four Seasons' in 1723.",
+    category: "Music",
+  },
+  {
+    question: "Which movie won the Academy Award for Best Picture in 2020?",
+    options: ["1917", "Joker", "Parasite", "Once Upon a Time in Hollywood"],
+    answer: "Parasite",
+    explanation: "'Parasite' won the Academy Award for Best Picture in 2020.",
+    category: "Movies",
+  },
 ];
 
 function shuffle(array: Question[]): Question[] {
@@ -169,15 +308,24 @@ export default function Home() {
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [selectedCategories, setSelectedCategories] =
+    useState<string[]>(categories);
+
+  const availableQuestions = originalQuestions.filter((q) =>
+    selectedCategories.includes(q.category || ""),
+  );
 
   useEffect(() => {
+    const filtered = originalQuestions.filter((q) =>
+      selectedCategories.includes(q.category || ""),
+    );
     setQuestions(
-      shuffle([...originalQuestions]).map((q) => ({
+      shuffle([...filtered]).map((q) => ({
         ...q,
         options: shuffleStrings([...q.options]),
       })),
     );
-  }, []);
+  }, [selectedCategories]);
 
   useEffect(() => {
     const saved = localStorage.getItem("quizHighScore");
@@ -272,6 +420,7 @@ export default function Home() {
   };
 
   const restartQuiz = () => {
+    setSelectedCategories(categories);
     setQuestions(
       shuffle([...originalQuestions]).map((q) => ({
         ...q,
@@ -313,7 +462,7 @@ export default function Home() {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
               <Target className="text-blue-500 mx-auto mb-2" size={24} />
               <p className="text-sm font-semibold text-gray-700">
-                15 Questions
+                {availableQuestions.length} Questions
               </p>
             </div>
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
@@ -329,9 +478,47 @@ export default function Home() {
             </span>
           </div>
 
+          <div className="mb-6 w-full">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Select Categories:</h3>
+            <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+              {categories.map(cat => (
+                <label key={cat} className="flex items-center bg-white bg-opacity-50 p-3 rounded-lg hover:bg-opacity-70 transition-all cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(cat)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCategories(prev => [...prev, cat]);
+                      } else {
+                        setSelectedCategories(prev => prev.filter(c => c !== cat));
+                      }
+                    }}
+                    className="mr-3 accent-purple-600"
+                  />
+                  <span className="text-gray-800 font-medium">{cat}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={() => setSelectedCategories(categories)}
+                className="text-sm text-purple-600 hover:text-purple-800 font-medium underline"
+              >
+                Select All
+              </button>
+              <button
+                onClick={() => setSelectedCategories([])}
+                className="text-sm text-gray-600 hover:text-gray-800 font-medium underline"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
           <button
             onClick={() => setQuizStarted(true)}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            disabled={availableQuestions.length === 0}
+            className={`w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 ${availableQuestions.length === 0 ? 'opacity-50 cursor-not-allowed hover:transform-none' : ''}`}
           >
             <Zap className="mr-3" size={24} />
             Start Challenge
