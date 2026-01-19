@@ -13,7 +13,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Question {
   question: string;
@@ -310,6 +310,8 @@ export default function Home() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedCategories, setSelectedCategories] =
     useState<string[]>(categories);
+  const [questionCount, setQuestionCount] = useState<number>(10);
+  const autoAdvanceRef = useRef<number | null>(null);
 
   const availableQuestions = originalQuestions.filter((q) =>
     selectedCategories.includes(q.category || ""),
@@ -330,6 +332,18 @@ export default function Home() {
   useEffect(() => {
     const saved = localStorage.getItem("quizHighScore");
     if (saved) setHighScore(parseInt(saved));
+    const savedCats = localStorage.getItem("quizSelectedCategories");
+    if (savedCats) {
+      try {
+        const parsed = JSON.parse(savedCats) as string[];
+        if (Array.isArray(parsed)) setSelectedCategories(parsed);
+      } catch {}
+    }
+    const savedCount = localStorage.getItem("quizQuestionCount");
+    if (savedCount) {
+      const n = parseInt(savedCount);
+      if (!isNaN(n)) setQuestionCount(n);
+    }
   }, []);
 
   useEffect(() => {
@@ -361,6 +375,35 @@ export default function Home() {
     }
   }, [quizStarted, showResults]);
 
+  // persist selected categories and question count
+  useEffect(() => {
+    localStorage.setItem(
+      "quizSelectedCategories",
+      JSON.stringify(selectedCategories),
+    );
+  }, [selectedCategories]);
+
+  useEffect(() => {
+    localStorage.setItem("quizQuestionCount", questionCount.toString());
+  }, [questionCount]);
+
+  // keyboard shortcuts (A-D) for selecting options
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!quizStarted || showResults || answered) return;
+      const key = e.key.toLowerCase();
+      if (key >= "a" && key <= "d") {
+        const idx = key.charCodeAt(0) - "a".charCodeAt(0);
+        const q = questions[currentQuestion];
+        if (q && q.options[idx]) {
+          handleAnswer(q.options[idx]);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [quizStarted, showResults, answered, questions, currentQuestion]);
+
   const handleAnswer = (selected: string) => {
     setSelectedAnswer(selected);
     const isCorrect = selected === questions[currentQuestion]?.answer;
@@ -382,6 +425,15 @@ export default function Home() {
     setAnswered(true);
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 500);
+
+    // auto-advance short delay
+    if (autoAdvanceRef.current) {
+      window.clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = null;
+    }
+    autoAdvanceRef.current = window.setTimeout(() => {
+      nextQuestion();
+    }, 1400);
   };
 
   const hint = () => {
@@ -402,6 +454,10 @@ export default function Home() {
   };
 
   const nextQuestion = () => {
+    if (autoAdvanceRef.current) {
+      window.clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = null;
+    }
     setAnswered(false);
     setFeedback("");
     setSelectedAnswer(null);
@@ -420,13 +476,9 @@ export default function Home() {
   };
 
   const restartQuiz = () => {
-    setSelectedCategories(categories);
-    setQuestions(
-      shuffle([...originalQuestions]).map((q) => ({
-        ...q,
-        options: shuffleStrings([...q.options]),
-      })),
-    );
+    // return to start screen and reset state; preserve selected categories/count
+    setQuizStarted(false);
+    setQuestions([]);
     setCurrentQuestion(0);
     setScore(0);
     setShowResults(false);
@@ -445,87 +497,139 @@ export default function Home() {
 
   if (!quizStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-        <div className="relative bg-white bg-opacity-95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl w-full max-w-lg text-center transform hover:scale-105 transition-all duration-300">
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-4 shadow-lg">
-              <Trophy className="text-white" size={32} />
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-600 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+        <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl text-center p-10 transform hover:scale-105 transition-all duration-300">
+          <div className="mb-8">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full mb-6 shadow-lg">
+              <Trophy className="text-white" size={40} />
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
               Brain Blitz
             </h1>
-            <p className="text-gray-600 text-lg">Challenge your knowledge!</p>
+            <p className="text-gray-700 text-xl">Challenge your knowledge!</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
-              <Target className="text-blue-500 mx-auto mb-2" size={24} />
-              <p className="text-sm font-semibold text-gray-700">
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-200">
+              <Target className="text-blue-600 mx-auto mb-3" size={28} />
+              <p className="text-lg font-semibold text-gray-800">
                 {availableQuestions.length} Questions
               </p>
             </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
-              <Clock className="text-green-500 mx-auto mb-2" size={24} />
-              <p className="text-sm font-semibold text-gray-700">30s per Q</p>
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
+              <Clock className="text-green-600 mx-auto mb-3" size={28} />
+              <p className="text-lg font-semibold text-gray-800">30s per Q</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-center mb-6 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl">
-            <Star className="text-yellow-500 mr-2" size={20} />
-            <span className="text-lg font-bold text-gray-800">
+          <div className="flex items-center justify-center mb-8 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
+            <Star className="text-yellow-600 mr-3" size={24} />
+            <span className="text-xl font-bold text-gray-800">
               High Score: {highScore}
             </span>
           </div>
 
-          <div className="mb-6 w-full">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Select Categories:</h3>
-            <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
-              {categories.map(cat => (
-                <label key={cat} className="flex items-center bg-white bg-opacity-50 p-3 rounded-lg hover:bg-opacity-70 transition-all cursor-pointer">
+          <div className="mb-8 w-full">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+              Select Categories:
+            </h3>
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              {categories.map((cat) => (
+                <label
+                  key={cat}
+                  className={`flex items-center justify-center bg-gradient-to-r p-3 rounded-full cursor-pointer text-sm font-medium transition-all ${
+                    selectedCategories.includes(cat)
+                      ? "from-blue-500 to-cyan-500 text-white shadow-md"
+                      : "from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300"
+                  }`}
+                >
                   <input
                     type="checkbox"
                     checked={selectedCategories.includes(cat)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedCategories(prev => [...prev, cat]);
+                        setSelectedCategories((prev) => [...prev, cat]);
                       } else {
-                        setSelectedCategories(prev => prev.filter(c => c !== cat));
+                        setSelectedCategories((prev) =>
+                          prev.filter((c) => c !== cat),
+                        );
                       }
                     }}
-                    className="mr-3 accent-purple-600"
+                    className="sr-only"
                   />
-                  <span className="text-gray-800 font-medium">{cat}</span>
+                  {cat}
                 </label>
               ))}
             </div>
-            <div className="flex justify-between items-center mt-4">
+            <div className="flex justify-center space-x-6">
               <button
                 onClick={() => setSelectedCategories(categories)}
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium underline"
+                className="text-blue-600 hover:text-blue-800 font-medium underline text-sm"
               >
                 Select All
               </button>
               <button
                 onClick={() => setSelectedCategories([])}
-                className="text-sm text-gray-600 hover:text-gray-800 font-medium underline"
+                className="text-gray-600 hover:text-gray-800 font-medium underline text-sm"
               >
                 Clear All
               </button>
             </div>
           </div>
 
+          <div className="mb-8 w-full">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+              Number of Questions
+            </h3>
+            <div className="flex items-center justify-center">
+              <select
+                value={questionCount}
+                onChange={(e) => setQuestionCount(parseInt(e.target.value))}
+                className="p-3 rounded-xl bg-white border border-gray-300 shadow-sm text-lg"
+              >
+                {[5, 10, 15, 20].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+                <option value={availableQuestions.length}>
+                  All ({availableQuestions.length})
+                </option>
+              </select>
+            </div>
+          </div>
+
           <button
-            onClick={() => setQuizStarted(true)}
+            onClick={() => {
+              // initialize questions based on selected categories and count
+              const filtered = originalQuestions.filter((q) =>
+                selectedCategories.includes(q.category || ""),
+              );
+              const toUse = shuffle([...filtered])
+                .slice(0, Math.max(1, Math.min(questionCount, filtered.length)))
+                .map((q) => ({
+                  ...q,
+                  options: shuffleStrings([...q.options]),
+                }));
+              setQuestions(toUse);
+              setCurrentQuestion(0);
+              setScore(0);
+              setTimeLeft(30);
+              setTotalTime(0);
+              setQuestionTimes([]);
+              setQuizStarted(true);
+            }}
             disabled={availableQuestions.length === 0}
-            className={`w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-8 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 ${availableQuestions.length === 0 ? 'opacity-50 cursor-not-allowed hover:transform-none' : ''}`}
+            className={`w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-5 px-10 rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 flex items-center justify-center text-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 ${availableQuestions.length === 0 ? "opacity-50 cursor-not-allowed hover:transform-none" : ""}`}
           >
-            <Zap className="mr-3" size={24} />
+            <Zap className="mr-4" size={28} />
             Start Challenge
           </button>
 
-          <p className="text-xs text-gray-500 mt-4">
-            Test your knowledge across multiple categories
+          <p className="text-sm text-gray-500 mt-6">
+            Test your knowledge across multiple categories • Use A-D keys during
+            quiz
           </p>
         </div>
       </div>
