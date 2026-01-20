@@ -308,6 +308,8 @@ export default function Home() {
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [hasSavedProgress, setHasSavedProgress] = useState(false);
   const [selectedCategories, setSelectedCategories] =
     useState<string[]>(categories);
   const [questionCount, setQuestionCount] = useState<number>(10);
@@ -344,13 +346,15 @@ export default function Home() {
       const n = parseInt(savedCount);
       if (!isNaN(n)) setQuestionCount(n);
     }
+    // check for saved progress
+    if (localStorage.getItem("quizProgress")) setHasSavedProgress(true);
   }, []);
 
   useEffect(() => {
-    if (timeLeft > 0 && !showResults && !answered) {
+    if (timeLeft > 0 && !showResults && !answered && !paused) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !showResults && !answered) {
+    } else if (timeLeft === 0 && !showResults && !answered && !paused) {
       setAnswered(true);
       setFeedback(
         "Time's up! Correct answer: " + questions[currentQuestion]?.answer,
@@ -364,16 +368,17 @@ export default function Home() {
     questions.length,
     answered,
     questions,
+    paused,
   ]);
 
   useEffect(() => {
-    if (quizStarted && !showResults) {
+    if (quizStarted && !showResults && !paused) {
       const totalTimer = setInterval(() => {
         setTotalTime((prev) => prev + 1);
       }, 1000);
       return () => clearInterval(totalTimer);
     }
-  }, [quizStarted, showResults]);
+  }, [quizStarted, showResults, paused]);
 
   // persist selected categories and question count
   useEffect(() => {
@@ -403,6 +408,28 @@ export default function Home() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [quizStarted, showResults, answered, questions, currentQuestion]);
+
+  // additional keyboard shortcuts: P pause/resume, S save, L load, H reset high score
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (key === "p") {
+        // toggle pause when quiz running
+        if (quizStarted && !showResults) togglePause();
+      }
+      if (key === "s") {
+        if (quizStarted) saveProgress();
+      }
+      if (key === "l") {
+        loadProgress();
+      }
+      if (key === "h") {
+        resetHighScore();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [quizStarted, showResults, answered, questions, currentQuestion, paused]);
 
   const handleAnswer = (selected: string) => {
     setSelectedAnswer(selected);
@@ -450,6 +477,81 @@ export default function Home() {
         return newQs;
       });
       setHintsUsed(hintsUsed + 1);
+    }
+  };
+
+  const togglePause = () => {
+    setPaused((p) => !p);
+  };
+
+  const resetHighScore = () => {
+    setHighScore(0);
+    localStorage.removeItem("quizHighScore");
+    setFeedback("High score reset.");
+    setTimeout(() => setFeedback(""), 1200);
+  };
+
+  const saveProgress = () => {
+    const payload = {
+      questions,
+      currentQuestion,
+      score,
+      timeLeft,
+      totalTime,
+      questionTimes,
+      streak,
+      maxStreak,
+      selectedAnswer,
+      answered,
+      hintsUsed,
+      showExplanation,
+      quizStarted,
+      selectedCategories,
+      questionCount,
+    };
+    try {
+      localStorage.setItem("quizProgress", JSON.stringify(payload));
+      setHasSavedProgress(true);
+      setFeedback("Progress saved.");
+      setTimeout(() => setFeedback(""), 1200);
+    } catch (e) {
+      console.error("Failed to save progress", e);
+    }
+  };
+
+  const loadProgress = () => {
+    const raw = localStorage.getItem("quizProgress");
+    if (!raw) {
+      setFeedback("No saved progress to load.");
+      setTimeout(() => setFeedback(""), 1200);
+      return;
+    }
+    try {
+      const p = JSON.parse(raw) as any;
+      if (Array.isArray(p.questions)) setQuestions(p.questions);
+      if (typeof p.currentQuestion === "number")
+        setCurrentQuestion(p.currentQuestion);
+      if (typeof p.score === "number") setScore(p.score);
+      if (typeof p.timeLeft === "number") setTimeLeft(p.timeLeft);
+      if (typeof p.totalTime === "number") setTotalTime(p.totalTime);
+      if (Array.isArray(p.questionTimes)) setQuestionTimes(p.questionTimes);
+      if (typeof p.streak === "number") setStreak(p.streak);
+      if (typeof p.maxStreak === "number") setMaxStreak(p.maxStreak);
+      if (typeof p.selectedAnswer === "string")
+        setSelectedAnswer(p.selectedAnswer);
+      if (typeof p.answered === "boolean") setAnswered(p.answered);
+      if (typeof p.hintsUsed === "number") setHintsUsed(p.hintsUsed);
+      if (typeof p.showExplanation === "boolean")
+        setShowExplanation(p.showExplanation);
+      if (typeof p.quizStarted === "boolean") setQuizStarted(p.quizStarted);
+      if (Array.isArray(p.selectedCategories))
+        setSelectedCategories(p.selectedCategories);
+      if (typeof p.questionCount === "number")
+        setQuestionCount(p.questionCount);
+      setFeedback("Progress loaded.");
+      setTimeout(() => setFeedback(""), 1200);
+    } catch (e) {
+      console.error("Failed to load progress", e);
     }
   };
 
@@ -744,6 +846,33 @@ export default function Home() {
               </div>
               <div className="bg-white bg-opacity-20 rounded-full p-2">
                 <Zap className="text-orange-400" size={20} />
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={togglePause}
+                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
+                >
+                  {paused ? "Resume" : "Pause"}
+                </button>
+                <button
+                  onClick={saveProgress}
+                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={loadProgress}
+                  disabled={!hasSavedProgress}
+                  className={`text-sm px-3 py-1 rounded-full ${hasSavedProgress ? "bg-white bg-opacity-10 text-white hover:bg-opacity-20" : "bg-white bg-opacity-5 text-white/60 cursor-not-allowed"}`}
+                >
+                  Load
+                </button>
+                <button
+                  onClick={resetHighScore}
+                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
+                >
+                  Reset HS
+                </button>
               </div>
             </div>
           </div>
