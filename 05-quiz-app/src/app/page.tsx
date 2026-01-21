@@ -599,51 +599,83 @@ export default function Home() {
 
   if (!quizStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-600 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
-        <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl text-center p-10 transform hover:scale-105 transition-all duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div
+            className="absolute -bottom-40 -left-40 w-96 h-96 bg-pink-400/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-spin"
+            style={{ animationDuration: "20s" }}
+          ></div>
+        </div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
+        <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-500/20 w-full max-w-2xl text-center p-10 transform hover:scale-[1.02] transition-all duration-500 border border-white/20 ring-1 ring-white/30">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full mb-6 shadow-lg">
-              <Trophy className="text-white" size={40} />
+            <div
+              className="inline-flex items-center justify-center w-28 h-28 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-full mb-6 shadow-2xl shadow-orange-500/30 animate-bounce"
+              style={{ animationDuration: "2s" }}
+            >
+              <Trophy className="text-white drop-shadow-lg" size={48} />
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
-              Brain Blitz
+            <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 tracking-tight">
+              🧠 Brain Blitz
             </h1>
-            <p className="text-gray-700 text-xl">Challenge your knowledge!</p>
+            <p className="text-gray-600 text-xl font-medium">
+              Challenge your knowledge & beat your high score!
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-200">
-              <Target className="text-blue-600 mx-auto mb-3" size={28} />
-              <p className="text-lg font-semibold text-gray-800">
-                {availableQuestions.length} Questions
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 hover:-translate-y-1">
+              <Target
+                className="text-white mx-auto mb-3 group-hover:scale-110 transition-transform"
+                size={32}
+              />
+              <p className="text-2xl font-bold text-white">
+                {availableQuestions.length}
               </p>
+              <p className="text-blue-100 text-sm">Questions</p>
             </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
-              <Clock className="text-green-600 mx-auto mb-3" size={28} />
-              <p className="text-lg font-semibold text-gray-800">30s per Q</p>
+            <div className="group bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300 hover:-translate-y-1">
+              <Clock
+                className="text-white mx-auto mb-3 group-hover:scale-110 transition-transform"
+                size={32}
+              />
+              <p className="text-2xl font-bold text-white">30s</p>
+              <p className="text-emerald-100 text-sm">Per Question</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-center mb-8 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
-            <Star className="text-yellow-600 mr-3" size={24} />
-            <span className="text-xl font-bold text-gray-800">
-              High Score: {highScore}
+          <div className="flex items-center justify-center mb-8 p-5 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 rounded-2xl shadow-lg shadow-amber-400/30 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <Star
+              className="text-white mr-3 animate-spin"
+              style={{ animationDuration: "3s" }}
+              size={28}
+            />
+            <span className="text-2xl font-bold text-white drop-shadow-sm">
+              🏆 High Score: {highScore}
             </span>
           </div>
 
           <div className="mb-8 w-full">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">
-              Select Categories:
+            <h3 className="text-lg font-bold text-gray-700 mb-4 text-center flex items-center justify-center gap-2">
+              <span className="w-8 h-0.5 bg-gradient-to-r from-transparent to-purple-400"></span>
+              📚 Select Categories
+              <span className="w-8 h-0.5 bg-gradient-to-l from-transparent to-purple-400"></span>
             </h3>
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-6">
               {categories.map((cat) => (
                 <label
                   key={cat}
-                  className={`flex items-center justify-center bg-gradient-to-r p-3 rounded-full cursor-pointer text-sm font-medium transition-all ${
+                  className={`flex items-center justify-center p-3 rounded-xl cursor-pointer text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                     selectedCategories.includes(cat)
-                      ? "from-blue-500 to-cyan-500 text-white shadow-md"
-                      : "from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300"
+                      ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-md"
                   }`}
                 >
                   <input
@@ -723,15 +755,23 @@ export default function Home() {
               setQuizStarted(true);
             }}
             disabled={availableQuestions.length === 0}
-            className={`w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-5 px-10 rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 flex items-center justify-center text-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 ${availableQuestions.length === 0 ? "opacity-50 cursor-not-allowed hover:transform-none" : ""}`}
+            className={`group w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-5 px-10 rounded-2xl transition-all duration-300 flex items-center justify-center text-xl font-bold shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${availableQuestions.length === 0 ? "opacity-50 cursor-not-allowed hover:transform-none hover:scale-100" : ""}`}
           >
-            <Zap className="mr-4" size={28} />
-            Start Challenge
+            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+            <Zap
+              className="mr-3 group-hover:rotate-12 transition-transform"
+              size={28}
+            />
+            🚀 Start Challenge
           </button>
 
-          <p className="text-sm text-gray-500 mt-6">
-            Test your knowledge across multiple categories • Use A-D keys during
-            quiz
+          <p className="text-sm text-gray-400 mt-6 flex items-center justify-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            Test your knowledge • Use{" "}
+            <kbd className="px-2 py-0.5 bg-gray-100 rounded text-xs font-mono">
+              A-D
+            </kbd>{" "}
+            keys during quiz
           </p>
         </div>
       </div>
@@ -747,67 +787,124 @@ export default function Home() {
         : 0;
     const accuracy =
       questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+    const isNewHighScore = score >= highScore && score > 0;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-        <div className="relative bg-white bg-opacity-95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl w-full max-w-lg text-center transform hover:scale-105 transition-all duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Celebration background */}
+        <div className="absolute inset-0 overflow-hidden">
+          {isNewHighScore && (
+            <>
+              <div
+                className="absolute top-20 left-10 text-6xl animate-bounce"
+                style={{ animationDelay: "0s" }}
+              >
+                🎉
+              </div>
+              <div
+                className="absolute top-40 right-20 text-5xl animate-bounce"
+                style={{ animationDelay: "0.3s" }}
+              >
+                🌟
+              </div>
+              <div
+                className="absolute bottom-32 left-20 text-4xl animate-bounce"
+                style={{ animationDelay: "0.6s" }}
+              >
+                🎊
+              </div>
+              <div
+                className="absolute bottom-20 right-10 text-6xl animate-bounce"
+                style={{ animationDelay: "0.9s" }}
+              >
+                🏆
+              </div>
+            </>
+          )}
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl"></div>
+        </div>
+        <div className="relative bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-lg text-center transform hover:scale-[1.02] transition-all duration-500 border border-white/20">
           <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full mb-4 shadow-lg">
-              <Award className="text-white" size={32} />
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-full mb-4 shadow-2xl shadow-orange-500/30 animate-pulse">
+              <Award className="text-white drop-shadow-lg" size={40} />
             </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Quiz Complete!
+            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">
+              {isNewHighScore ? "🎉 New High Score!" : "Quiz Complete!"}
             </h1>
-            <p className="text-gray-600">
-              Great job on completing the challenge!
+            <p className="text-gray-500 font-medium">
+              {accuracy >= 80
+                ? "Outstanding performance! 🌟"
+                : accuracy >= 60
+                  ? "Great job! Keep it up! 💪"
+                  : "Good effort! Practice makes perfect! 📚"}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
-              <Trophy className="text-blue-500 mx-auto mb-2" size={24} />
-              <p className="text-2xl font-bold text-gray-800">
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <Trophy
+                className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
+                size={28}
+              />
+              <p className="text-3xl font-bold text-white">
                 {score}/{questions.length}
               </p>
-              <p className="text-xs text-gray-600">Score</p>
+              <p className="text-blue-100 text-sm">Score</p>
             </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
-              <TrendingUp className="text-green-500 mx-auto mb-2" size={24} />
-              <p className="text-2xl font-bold text-gray-800">{accuracy}%</p>
-              <p className="text-xs text-gray-600">Accuracy</p>
+            <div className="group bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <TrendingUp
+                className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
+                size={28}
+              />
+              <p className="text-3xl font-bold text-white">{accuracy}%</p>
+              <p className="text-emerald-100 text-sm">Accuracy</p>
             </div>
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl">
-              <Clock className="text-purple-500 mx-auto mb-2" size={24} />
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="group bg-gradient-to-br from-violet-500 to-purple-600 p-5 rounded-2xl shadow-lg shadow-violet-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <Clock
+                className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
+                size={28}
+              />
+              <p className="text-3xl font-bold text-white">
                 {Math.floor(totalTime / 60)}:
                 {(totalTime % 60).toString().padStart(2, "0")}
               </p>
-              <p className="text-xs text-gray-600">Total Time</p>
+              <p className="text-violet-100 text-sm">Total Time</p>
             </div>
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl">
-              <Zap className="text-orange-500 mx-auto mb-2" size={24} />
-              <p className="text-2xl font-bold text-gray-800">{maxStreak}</p>
-              <p className="text-xs text-gray-600">Best Streak</p>
+            <div className="group bg-gradient-to-br from-orange-500 to-red-500 p-5 rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <Zap
+                className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
+                size={28}
+              />
+              <p className="text-3xl font-bold text-white">{maxStreak}</p>
+              <p className="text-orange-100 text-sm">Best Streak</p>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-4 rounded-xl mb-6">
-            <Star className="text-yellow-500 mx-auto mb-2" size={20} />
-            <p className="text-lg font-bold text-gray-800">
-              High Score: {highScore}
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 p-5 rounded-2xl mb-6 shadow-lg shadow-amber-400/30">
+            <Star
+              className="text-white mx-auto mb-2 animate-spin"
+              style={{ animationDuration: "3s" }}
+              size={24}
+            />
+            <p className="text-xl font-bold text-white">
+              🏆 High Score: {highScore}
             </p>
-            <p className="text-sm text-gray-600">
-              Average time per question: {averageTime}s
+            <p className="text-amber-100 text-sm">
+              ⏱️ Avg. time per question: {averageTime}s
             </p>
           </div>
 
           <button
             onClick={restartQuiz}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 px-8 rounded-2xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 flex items-center justify-center text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            className="group w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center text-xl font-bold shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden"
           >
-            <RotateCcw className="mr-3" size={24} />
-            Try Again
+            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+            <RotateCcw
+              className="mr-3 group-hover:rotate-180 transition-transform duration-500"
+              size={24}
+            />
+            🔄 Play Again
           </button>
         </div>
       </div>
@@ -824,121 +921,164 @@ export default function Home() {
 
   const q = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const timerPercentage = (timeLeft / 30) * 100;
+  const isLowTime = timeLeft <= 10;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        ></div>
+      </div>
+      <div className="max-w-2xl mx-auto relative">
         {/* Header */}
-        <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-2xl p-6 mb-6 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 mb-6 shadow-2xl border border-white/10">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-4">
-              <div className="bg-white bg-opacity-20 rounded-full p-2">
-                <Trophy className="text-yellow-400" size={20} />
+              <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl p-3 shadow-lg shadow-amber-500/30">
+                <Trophy className="text-white" size={22} />
               </div>
               <div>
-                <p className="text-white text-sm opacity-80">Score</p>
-                <p className="text-white text-xl font-bold">{score}</p>
+                <p className="text-white/60 text-xs uppercase tracking-wide">
+                  Score
+                </p>
+                <p className="text-white text-2xl font-bold">{score}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div>
-                <p className="text-white text-sm opacity-80">Streak</p>
-                <p className="text-white text-xl font-bold">{streak}</p>
+              <div className="text-right">
+                <p className="text-white/60 text-xs uppercase tracking-wide">
+                  Streak
+                </p>
+                <p className="text-white text-2xl font-bold flex items-center justify-end">
+                  {streak}
+                  {streak >= 3 && <span className="ml-1">🔥</span>}
+                </p>
               </div>
-              <div className="bg-white bg-opacity-20 rounded-full p-2">
-                <Zap className="text-orange-400" size={20} />
+              <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-xl p-3 shadow-lg shadow-orange-500/30">
+                <Zap className="text-white" size={22} />
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <button
                   onClick={togglePause}
-                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
+                  className="text-xs font-medium bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all border border-white/10"
                 >
-                  {paused ? "Resume" : "Pause"}
+                  {paused ? "▶️ Resume" : "⏸️ Pause"}
                 </button>
                 <button
                   onClick={saveProgress}
-                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
+                  className="text-xs font-medium bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all border border-white/10"
                 >
-                  Save
+                  💾
                 </button>
                 <button
                   onClick={loadProgress}
                   disabled={!hasSavedProgress}
-                  className={`text-sm px-3 py-1 rounded-full ${hasSavedProgress ? "bg-white bg-opacity-10 text-white hover:bg-opacity-20" : "bg-white bg-opacity-5 text-white/60 cursor-not-allowed"}`}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all border border-white/10 ${hasSavedProgress ? "bg-white/10 text-white hover:bg-white/20" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
                 >
-                  Load
-                </button>
-                <button
-                  onClick={resetHighScore}
-                  className="text-sm bg-white bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20"
-                >
-                  Reset HS
+                  📂
                 </button>
               </div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-white bg-opacity-20 rounded-full h-3 mb-4">
+          <div className="w-full bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-blue-400 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out relative"
               style={{ width: `${progress}%` }}
-            ></div>
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-pulse"></div>
+            </div>
           </div>
 
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Clock className="text-white opacity-80" size={16} />
-              <p className="text-white text-sm">{timeLeft}s</p>
+            <div className="flex items-center space-x-3">
+              {/* Circular Timer */}
+              <div className="relative w-12 h-12">
+                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke={isLowTime ? "#ef4444" : "#a855f7"}
+                    strokeWidth="3"
+                    strokeDasharray={`${timerPercentage} 100`}
+                    strokeLinecap="round"
+                    className={`transition-all duration-1000 ${isLowTime ? "animate-pulse" : ""}`}
+                  />
+                </svg>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${isLowTime ? "text-red-400" : "text-white"}`}
+                >
+                  {timeLeft}
+                </span>
+              </div>
+              <p
+                className={`text-sm font-medium ${isLowTime ? "text-red-400 animate-pulse" : "text-white/70"}`}
+              >
+                {isLowTime ? "⚡ Hurry!" : "seconds"}
+              </p>
             </div>
-            <p className="text-white text-sm opacity-80">
-              {currentQuestion + 1} / {questions.length}
-            </p>
+            <div className="bg-white/10 px-4 py-2 rounded-xl">
+              <p className="text-white text-sm font-semibold">
+                Q {currentQuestion + 1}{" "}
+                <span className="text-white/50">of</span> {questions.length}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Question Card */}
         <div
-          className={`bg-white bg-opacity-95 backdrop-blur-md rounded-3xl p-8 shadow-2xl transition-all duration-300 ${isAnimating ? "scale-105" : ""}`}
+          className={`bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl transition-all duration-500 border border-white/20 ${isAnimating ? "scale-[1.02] shadow-purple-500/20" : ""}`}
         >
           {q.category && (
-            <div className="inline-flex items-center bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
-              <Target size={14} className="mr-1" />
+            <div className="inline-flex items-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold mb-4 shadow-lg shadow-purple-500/20">
+              <Target size={14} className="mr-2" />
               {q.category}
             </div>
           )}
 
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-relaxed">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8 leading-relaxed">
             {q.question}
           </h2>
 
           {/* Feedback */}
           {feedback && (
             <div
-              className={`mb-6 p-4 rounded-xl transition-all duration-300 ${
+              className={`mb-6 p-5 rounded-2xl transition-all duration-300 animate-in slide-in-from-top ${
                 feedback.includes("Correct")
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-red-50 border border-red-200"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30"
+                  : "bg-gradient-to-r from-red-500 to-rose-500 shadow-lg shadow-red-500/30"
               }`}
             >
               <div className="flex items-center">
                 {feedback.includes("Correct") ? (
                   <CheckCircle
-                    className="text-green-500 mr-3 flex-shrink-0"
-                    size={24}
+                    className="text-white mr-3 flex-shrink-0"
+                    size={28}
                   />
                 ) : (
                   <XCircle
-                    className="text-red-500 mr-3 flex-shrink-0"
-                    size={24}
+                    className="text-white mr-3 flex-shrink-0"
+                    size={28}
                   />
                 )}
-                <p
-                  className={`font-semibold ${
-                    feedback.includes("Correct")
-                      ? "text-green-800"
-                      : "text-red-800"
-                  }`}
-                >
+                <p className="font-bold text-white text-lg">
+                  {feedback.includes("Correct") ? "✨ " : ""}
                   {feedback}
                 </p>
               </div>
@@ -952,20 +1092,38 @@ export default function Home() {
                 key={index}
                 onClick={() => handleAnswer(option)}
                 disabled={answered}
-                className={`w-full p-4 rounded-xl transition-all duration-200 text-left font-medium ${
+                className={`group w-full p-5 rounded-2xl transition-all duration-300 text-left font-semibold flex items-center ${
                   answered
                     ? option === q.answer
-                      ? "bg-green-500 text-white shadow-lg transform scale-105"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]"
                       : option === selectedAnswer
-                        ? "bg-red-500 text-white shadow-lg"
-                        : "bg-gray-100 text-gray-500"
-                    : "bg-gradient-to-r from-white to-gray-50 hover:from-blue-50 hover:to-purple-50 text-gray-800 border-2 border-gray-200 hover:border-blue-300 hover:shadow-md transform hover:scale-102"
-                } disabled:opacity-60 disabled:cursor-not-allowed`}
+                        ? "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xl shadow-red-500/30"
+                        : "bg-gray-100 text-gray-400"
+                    : "bg-white hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 text-gray-700 border-2 border-gray-200 hover:border-purple-300 hover:shadow-lg transform hover:scale-[1.02] hover:-translate-y-0.5"
+                } disabled:cursor-not-allowed`}
               >
-                <span className="inline-block w-8 h-8 bg-gray-200 rounded-full text-gray-700 font-bold text-sm mr-3 flex-shrink-0">
+                <span
+                  className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm mr-4 flex-shrink-0 transition-all ${
+                    answered
+                      ? option === q.answer
+                        ? "bg-white/20 text-white"
+                        : option === selectedAnswer
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-200 text-gray-400"
+                      : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white group-hover:scale-110 shadow-lg"
+                  }`}
+                >
                   {String.fromCharCode(65 + index)}
                 </span>
-                {option}
+                <span className="flex-1">{option}</span>
+                {answered && option === q.answer && (
+                  <CheckCircle className="text-white ml-2" size={24} />
+                )}
+                {answered &&
+                  option === selectedAnswer &&
+                  option !== q.answer && (
+                    <XCircle className="text-white ml-2" size={24} />
+                  )}
               </button>
             ))}
           </div>
@@ -974,18 +1132,27 @@ export default function Home() {
           {!answered && hintsUsed < 1 && (
             <button
               onClick={hint}
-              className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-3 px-6 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition-all duration-200 flex items-center justify-center font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 mb-4"
+              className="group w-full bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 mb-4 relative overflow-hidden"
             >
-              <Lightbulb className="mr-2" size={20} />
-              Use Hint (-1 wrong option)
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              <Lightbulb
+                className="mr-3 group-hover:rotate-12 transition-transform"
+                size={22}
+              />
+              💡 Use Hint (Remove 1 wrong option)
             </button>
           )}
 
           {/* Explanation */}
           {answered && q.explanation && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl mb-4 border-l-4 border-blue-400">
-              <p className="text-blue-800 font-medium mb-1">💡 Explanation:</p>
-              <p className="text-blue-700 text-sm">{q.explanation}</p>
+            <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-5 rounded-2xl mb-4 border-l-4 border-purple-400 shadow-inner">
+              <p className="text-purple-800 font-bold mb-2 flex items-center">
+                <span className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mr-2 text-white text-xs">
+                  i
+                </span>
+                Did you know?
+              </p>
+              <p className="text-purple-700">{q.explanation}</p>
             </div>
           )}
 
@@ -993,12 +1160,16 @@ export default function Home() {
           {answered && (
             <button
               onClick={nextQuestion}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-8 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center text-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="group w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center text-xl font-bold shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
             >
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
               {currentQuestion < questions.length - 1
-                ? "Next Question"
-                : "View Results"}
-              <TrendingUp className="ml-2" size={20} />
+                ? "➡️ Next Question"
+                : "🏆 View Results"}
+              <TrendingUp
+                className="ml-3 group-hover:translate-x-1 transition-transform"
+                size={24}
+              />
             </button>
           )}
         </div>
