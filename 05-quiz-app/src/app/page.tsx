@@ -313,6 +313,8 @@ export default function Home() {
   const [selectedCategories, setSelectedCategories] =
     useState<string[]>(categories);
   const [questionCount, setQuestionCount] = useState<number>(10);
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
+  const [reviewMode, setReviewMode] = useState(false);
   const autoAdvanceRef = useRef<number | null>(null);
 
   const availableQuestions = originalQuestions.filter((q) =>
@@ -433,6 +435,11 @@ export default function Home() {
 
   const handleAnswer = (selected: string) => {
     setSelectedAnswer(selected);
+    setSelectedAnswers((prev) => {
+      const newArr = [...prev];
+      newArr[currentQuestion] = selected;
+      return newArr;
+    });
     const isCorrect = selected === questions[currentQuestion]?.answer;
     const timeSpent = 30 - timeLeft;
 
@@ -508,6 +515,8 @@ export default function Home() {
       quizStarted,
       selectedCategories,
       questionCount,
+      selectedAnswers,
+      reviewMode,
     };
     try {
       localStorage.setItem("quizProgress", JSON.stringify(payload));
@@ -548,6 +557,9 @@ export default function Home() {
         setSelectedCategories(p.selectedCategories);
       if (typeof p.questionCount === "number")
         setQuestionCount(p.questionCount);
+      if (Array.isArray(p.selectedAnswers))
+        setSelectedAnswers(p.selectedAnswers);
+      if (typeof p.reviewMode === "boolean") setReviewMode(p.reviewMode);
       setFeedback("Progress loaded.");
       setTimeout(() => setFeedback(""), 1200);
     } catch (e) {
@@ -595,6 +607,8 @@ export default function Home() {
     setStreak(0);
     setMaxStreak(0);
     setIsAnimating(false);
+    setSelectedAnswers([]);
+    setReviewMode(false);
   };
 
   if (!quizStarted) {
@@ -909,6 +923,144 @@ export default function Home() {
             />
             🔄 Play Again
           </button>
+
+          <button
+            onClick={() => setReviewMode(true)}
+            className="group w-full bg-gradient-to-r from-green-600 via-teal-600 to-blue-600 text-white py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center text-xl font-bold shadow-xl shadow-green-500/30 hover:shadow-2xl hover:shadow-green-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden mt-4"
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+            <Lightbulb
+              className="mr-3 group-hover:rotate-12 transition-transform"
+              size={24}
+            />
+            📖 Review Quiz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (reviewMode) {
+    const q = questions[currentQuestion];
+    const userAnswer = selectedAnswers[currentQuestion];
+    const isCorrect = userAnswer === q.answer;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
+          <div
+            className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
+        </div>
+        <div className="max-w-2xl mx-auto relative">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 mb-6 shadow-2xl border border-white/10">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white text-2xl font-bold">📖 Review Mode</h2>
+              <button
+                onClick={() => setReviewMode(false)}
+                className="text-white bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all"
+              >
+                ← Back to Results
+              </button>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <div className="bg-white/10 px-4 py-2 rounded-xl">
+                <p className="text-white text-sm font-semibold">
+                  Q {currentQuestion + 1}{" "}
+                  <span className="text-white/50">of</span> {questions.length}
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() =>
+                    setCurrentQuestion(Math.max(0, currentQuestion - 1))
+                  }
+                  disabled={currentQuestion === 0}
+                  className="text-white bg-white/10 px-3 py-1 rounded-lg hover:bg-white/20 transition-all disabled:opacity-50"
+                >
+                  ← Prev
+                </button>
+                <button
+                  onClick={() =>
+                    setCurrentQuestion(
+                      Math.min(questions.length - 1, currentQuestion + 1),
+                    )
+                  }
+                  disabled={currentQuestion === questions.length - 1}
+                  className="text-white bg-white/10 px-3 py-1 rounded-lg hover:bg-white/20 transition-all disabled:opacity-50"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Question Card */}
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+            {q.category && (
+              <div className="inline-flex items-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold mb-4 shadow-lg shadow-purple-500/20">
+                <Target size={14} className="mr-2" />
+                {q.category}
+              </div>
+            )}
+
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8 leading-relaxed">
+              {q.question}
+            </h2>
+
+            {/* Options */}
+            <div className="space-y-3 mb-6">
+              {q.options.map((option, index) => (
+                <div
+                  key={index}
+                  className={`w-full p-5 rounded-2xl text-left font-semibold flex items-center ${
+                    option === q.answer
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/30"
+                      : option === userAnswer
+                        ? "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xl shadow-red-500/30"
+                        : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm mr-4 flex-shrink-0 ${
+                      option === q.answer
+                        ? "bg-white/20 text-white"
+                        : option === userAnswer
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-200 text-gray-400"
+                    }`}
+                  >
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span className="flex-1">{option}</span>
+                  {option === q.answer && (
+                    <CheckCircle className="text-white ml-2" size={24} />
+                  )}
+                  {option === userAnswer && option !== q.answer && (
+                    <XCircle className="text-white ml-2" size={24} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Explanation */}
+            {q.explanation && (
+              <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-5 rounded-2xl mb-4 border-l-4 border-purple-400 shadow-inner">
+                <p className="text-purple-800 font-bold mb-2 flex items-center">
+                  <span className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mr-2 text-white text-xs">
+                    i
+                  </span>
+                  Did you know?
+                </p>
+                <p className="text-purple-700">{q.explanation}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
