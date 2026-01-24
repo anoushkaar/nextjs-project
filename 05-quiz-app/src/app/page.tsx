@@ -314,8 +314,19 @@ export default function Home() {
     useState<string[]>(categories);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [reviewMode, setReviewMode] = useState(false);
   const autoAdvanceRef = useRef<number | null>(null);
+
+  // Audio elements for sound effects
+  const correctSoundRef = useRef<HTMLAudioElement>(null);
+  const incorrectSoundRef = useRef<HTMLAudioElement>(null);
+  const timerSoundRef = useRef<HTMLAudioElement>(null);
+
+  // Refs for focus management
+  const firstOptionRef = useRef<HTMLButtonElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   const availableQuestions = originalQuestions.filter((q) =>
     selectedCategories.includes(q.category || ""),
@@ -614,6 +625,20 @@ export default function Home() {
   if (!quizStarted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-600 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Skip Links */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-indigo-600 text-white px-4 py-2 rounded-lg z-50 focus:outline-none focus:ring-2 focus:ring-white"
+        >
+          Skip to main content
+        </a>
+        <a
+          href="#quiz-options"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-32 bg-indigo-600 text-white px-4 py-2 rounded-lg z-50 focus:outline-none focus:ring-2 focus:ring-white"
+        >
+          Skip to quiz options
+        </a>
+
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
@@ -628,8 +653,11 @@ export default function Home() {
         </div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
         <div
+          id="main-content"
           className="relative bg-gradient-to-br from-white/90 via-white/95 to-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-purple-500/20 w-full max-w-2xl text-center p-10 transform hover:scale-[1.02] transition-all duration-500 border border-white/20 ring-2 ring-white/40 animate-pulse"
           style={{ animationDuration: "4s" }}
+          role="main"
+          aria-labelledby="quiz-title"
         >
           <div className="mb-8">
             <div
@@ -638,7 +666,10 @@ export default function Home() {
             >
               <Trophy className="text-white drop-shadow-lg" size={48} />
             </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 tracking-tight">
+            <h1
+              id="quiz-title"
+              className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 tracking-tight"
+            >
               🧠 Brain Blitz
             </h1>
             <p className="text-gray-600 text-xl font-medium">
@@ -679,13 +710,20 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="mb-8 w-full">
-            <h3 className="text-lg font-bold text-gray-700 mb-4 text-center flex items-center justify-center gap-2">
+          <div id="quiz-options" className="mb-8 w-full">
+            <h3
+              id="categories-heading"
+              className="text-lg font-bold text-gray-700 mb-4 text-center flex items-center justify-center gap-2"
+            >
               <span className="w-8 h-0.5 bg-gradient-to-r from-transparent to-purple-400"></span>
               📚 Select Categories
               <span className="w-8 h-0.5 bg-gradient-to-l from-transparent to-purple-400"></span>
             </h3>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-6">
+            <div
+              className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-6"
+              role="group"
+              aria-labelledby="categories-heading"
+            >
               {categories.map((cat) => (
                 <label
                   key={cat}
@@ -708,8 +746,9 @@ export default function Home() {
                       }
                     }}
                     className="sr-only"
+                    aria-describedby={`category-${cat}-description`}
                   />
-                  {cat}
+                  <span id={`category-${cat}-description`}>{cat}</span>
                 </label>
               ))}
             </div>
@@ -717,12 +756,14 @@ export default function Home() {
               <button
                 onClick={() => setSelectedCategories(categories)}
                 className="text-blue-600 hover:text-blue-800 font-medium underline text-sm"
+                aria-label="Select all quiz categories"
               >
                 Select All
               </button>
               <button
                 onClick={() => setSelectedCategories([])}
                 className="text-gray-600 hover:text-gray-800 font-medium underline text-sm"
+                aria-label="Clear all selected quiz categories"
               >
                 Clear All
               </button>
@@ -734,10 +775,15 @@ export default function Home() {
               Number of Questions
             </h3>
             <div className="flex items-center justify-center">
+              <label htmlFor="question-count-select" className="sr-only">
+                Select number of questions
+              </label>
               <select
+                id="question-count-select"
                 value={questionCount}
                 onChange={(e) => setQuestionCount(parseInt(e.target.value))}
                 className="p-3 rounded-xl bg-white border border-gray-300 shadow-sm text-lg"
+                aria-describedby="question-count-description"
               >
                 {[5, 10, 15, 20].map((n) => (
                   <option key={n} value={n}>
@@ -748,6 +794,9 @@ export default function Home() {
                   All ({availableQuestions.length})
                 </option>
               </select>
+              <span id="question-count-description" className="sr-only">
+                Choose how many questions you want in your quiz
+              </span>
             </div>
           </div>
 
@@ -773,6 +822,12 @@ export default function Home() {
             }}
             disabled={availableQuestions.length === 0}
             className={`group w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-5 px-10 rounded-2xl transition-all duration-300 flex items-center justify-center text-xl font-bold shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${availableQuestions.length === 0 ? "opacity-50 cursor-not-allowed hover:transform-none hover:scale-100" : ""}`}
+            aria-label={
+              availableQuestions.length === 0
+                ? "No questions available with selected categories"
+                : "Start the quiz with selected options"
+            }
+            aria-describedby="start-quiz-description"
           >
             <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
             <Zap
@@ -781,6 +836,11 @@ export default function Home() {
             />
             🚀 Start Challenge
           </button>
+
+          <div id="start-quiz-description" className="sr-only">
+            Begins the quiz with your selected categories and number of
+            questions. Use A-D keys during the quiz to select answers quickly.
+          </div>
 
           <p className="text-sm text-gray-400 mt-6 flex items-center justify-center gap-2">
             <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
@@ -808,6 +868,14 @@ export default function Home() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Skip Links */}
+        <a
+          href="#results-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-violet-600 text-white px-4 py-2 rounded-lg z-50 focus:outline-none focus:ring-2 focus:ring-white"
+        >
+          Skip to results
+        </a>
+
         {/* Celebration background */}
         <div className="absolute inset-0 overflow-hidden">
           {isNewHighScore && (
@@ -841,12 +909,20 @@ export default function Home() {
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl"></div>
         </div>
-        <div className="relative bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-lg text-center transform hover:scale-[1.02] transition-all duration-500 border border-white/20">
+        <div
+          id="results-content"
+          className="relative bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-lg text-center transform hover:scale-[1.02] transition-all duration-500 border border-white/20"
+          role="main"
+          aria-labelledby="results-title"
+        >
           <div className="mb-6">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 rounded-full mb-4 shadow-2xl shadow-orange-500/30 animate-pulse">
               <Award className="text-white drop-shadow-lg" size={40} />
             </div>
-            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-2">
+            <h1
+              id="results-title"
+              className="text-4xl font-extrabold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-2"
+            >
               {isNewHighScore ? "🎉 New High Score!" : "Quiz Complete!"}
             </h1>
             <p className="text-gray-500 font-medium">
@@ -858,7 +934,14 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div
+            className="grid grid-cols-2 gap-3 mb-6"
+            role="region"
+            aria-labelledby="stats-heading"
+          >
+            <h2 id="stats-heading" className="sr-only">
+              Quiz Statistics
+            </h2>
             <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <Trophy
                 className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
