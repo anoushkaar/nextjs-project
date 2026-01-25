@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import Confetti from "react-confetti";
 
 interface Question {
   question: string;
@@ -316,6 +317,8 @@ export default function Home() {
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [reviewMode, setReviewMode] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const autoAdvanceRef = useRef<number | null>(null);
 
   // Audio elements for sound effects
@@ -444,6 +447,15 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handler);
   }, [quizStarted, showResults, answered, questions, currentQuestion, paused]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const handleAnswer = (selected: string) => {
     setSelectedAnswer(selected);
     setSelectedAnswers((prev) => {
@@ -461,6 +473,8 @@ export default function Home() {
       setFeedback("Correct!");
       setStreak(streak + 1);
       if (streak + 1 > maxStreak) setMaxStreak(streak + 1);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
     } else {
       setFeedback(
         "Wrong! Correct answer: " + questions[currentQuestion]?.answer,
@@ -1411,6 +1425,9 @@ export default function Home() {
             </button>
           )}
         </div>
+        {showConfetti && (
+          <Confetti width={dimensions.width} height={dimensions.height} />
+        )}
       </div>
     </div>
   );
