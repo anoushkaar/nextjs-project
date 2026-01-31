@@ -4,12 +4,19 @@ import {
   Award,
   CheckCircle,
   Clock,
+  Flame,
+  Gauge,
+  Gift,
   Lightbulb,
+  Medal,
   RotateCcw,
+  SkipForward,
   Star,
   Target,
   TrendingUp,
   Trophy,
+  Volume2,
+  VolumeX,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -22,7 +29,62 @@ interface Question {
   answer: string;
   explanation?: string;
   category?: string;
+  difficulty?: "easy" | "medium" | "hard";
 }
+
+type Difficulty = "easy" | "medium" | "hard";
+
+const difficultySettings: Record<
+  Difficulty,
+  { time: number; hintLimit: number; pointMultiplier: number }
+> = {
+  easy: { time: 45, hintLimit: 3, pointMultiplier: 1 },
+  medium: { time: 30, hintLimit: 2, pointMultiplier: 1.5 },
+  hard: { time: 15, hintLimit: 1, pointMultiplier: 2 },
+};
+
+const achievementsList = {
+  "hot-streak-5": {
+    name: "Hot Streak",
+    description: "5 correct in a row",
+    icon: "🔥",
+  },
+  "hot-streak-10": {
+    name: "Unstoppable",
+    description: "10 correct in a row",
+    icon: "🌟",
+  },
+  "perfect-score": {
+    name: "Perfect Score",
+    description: "100% accuracy",
+    icon: "💯",
+  },
+  "speed-demon": {
+    name: "Speed Demon",
+    description: "Answer in under 3 seconds",
+    icon: "⚡",
+  },
+  "no-hints": {
+    name: "Pure Genius",
+    description: "Complete quiz without hints",
+    icon: "🧠",
+  },
+  "first-quiz": {
+    name: "First Steps",
+    description: "Complete your first quiz",
+    icon: "🎯",
+  },
+  "high-scorer": {
+    name: "High Scorer",
+    description: "Score over 500 points",
+    icon: "🏆",
+  },
+  marathon: {
+    name: "Marathon Runner",
+    description: "Answer 20+ questions",
+    icon: "🏃",
+  },
+};
 
 const categories = [
   "Geography",
@@ -319,6 +381,25 @@ export default function Home() {
   const [reviewMode, setReviewMode] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [skipsRemaining, setSkipsRemaining] = useState(2);
+  const [bonusPoints, setBonusPoints] = useState(0);
+  const [showAchievementPopup, setShowAchievementPopup] = useState<
+    string | null
+  >(null);
+  const [hintsUsedTotal, setHintsUsedTotal] = useState(0);
+  const [fastestAnswer, setFastestAnswer] = useState<number | null>(null);
+  const [leaderboard, setLeaderboard] = useState<
+    { name: string; score: number; date: string }[]
+  >([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [achievements, setAchievements] = useState<string[]>([]);
+  const [categoryStats, setCategoryStats] = useState<
+    Record<string, { correct: number; total: number }>
+  >({});
   const autoAdvanceRef = useRef<number | null>(null);
 
   // Audio elements for sound effects
@@ -364,18 +445,44 @@ export default function Home() {
     }
     // check for saved progress
     if (localStorage.getItem("quizProgress")) setHasSavedProgress(true);
+    const savedLeaderboard = localStorage.getItem("quizLeaderboard");
+    if (savedLeaderboard) {
+      try {
+        const parsed = JSON.parse(savedLeaderboard) as {
+          name: string;
+          score: number;
+          date: string;
+        }[];
+        if (Array.isArray(parsed)) setLeaderboard(parsed);
+      } catch {}
+    }
   }, []);
 
   useEffect(() => {
-    if (timeLeft > 0 && !showResults && !answered && !paused) {
+    if (timeLeft > 0 && !showResults && !answered && !paused && quizStarted) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      // Play warning sound when time is low
+      if (timeLeft <= 5 && soundEnabled && timerSoundRef.current) {
+        timerSoundRef.current.currentTime = 0;
+        timerSoundRef.current.play().catch(() => {});
+      }
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !showResults && !answered && !paused) {
+    } else if (
+      timeLeft === 0 &&
+      !showResults &&
+      !answered &&
+      !paused &&
+      quizStarted
+    ) {
       setAnswered(true);
       setFeedback(
-        "Time's up! Correct answer: " + questions[currentQuestion]?.answer,
+        "⏰ Time's up! Correct answer: " + questions[currentQuestion]?.answer,
       );
       setStreak(0);
+      if (soundEnabled && incorrectSoundRef.current) {
+        incorrectSoundRef.current.currentTime = 0;
+        incorrectSoundRef.current.play().catch(() => {});
+      }
     }
   }, [
     timeLeft,
@@ -385,6 +492,8 @@ export default function Home() {
     answered,
     questions,
     paused,
+    quizStarted,
+    soundEnabled,
   ]);
 
   useEffect(() => {
@@ -464,22 +573,84 @@ export default function Home() {
       return newArr;
     });
     const isCorrect = selected === questions[currentQuestion]?.answer;
-    const timeSpent = 30 - timeLeft;
+    const currentTime = difficultySettings[difficulty].time;
+    const timeSpent = currentTime - timeLeft;
 
     setQuestionTimes((prev) => [...prev, timeSpent]);
 
+    // Track fastest answer
+    if (isCorrect && (fastestAnswer === null || timeSpent < fastestAnswer)) {
+      setFastestAnswer(timeSpent);
+    }
+
     if (isCorrect) {
+      // Calculate points with multipliers
+      const basePoints = 100;
+      const timeBonus = calculateTimeBonus(timeLeft);
+      const streakMultiplier = getStreakMultiplier(streak + 1);
+      const difficultyMultiplier =
+        difficultySettings[difficulty].pointMultiplier;
+      const earnedPoints = Math.round(
+        (basePoints + timeBonus) * streakMultiplier * difficultyMultiplier,
+      );
+
       setScore(score + 1);
-      setFeedback("Correct!");
+      setTotalPoints((prev) => prev + earnedPoints);
+      setBonusPoints(timeBonus);
+
+      const feedbackMsg =
+        timeBonus > 0
+          ? `Correct! +${earnedPoints} pts (${streakMultiplier > 1 ? `${streakMultiplier}x streak! ` : ""}+${timeBonus} time bonus!)`
+          : `Correct! +${earnedPoints} pts${streakMultiplier > 1 ? ` (${streakMultiplier}x streak!)` : ""}`;
+      setFeedback(feedbackMsg);
+
       setStreak(streak + 1);
       if (streak + 1 > maxStreak) setMaxStreak(streak + 1);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
+
+      // Play correct sound
+      if (soundEnabled && correctSoundRef.current) {
+        correctSoundRef.current.currentTime = 0;
+        correctSoundRef.current.play().catch(() => {});
+      }
+
+      // Update category stats
+      const category = questions[currentQuestion]?.category || "Unknown";
+      setCategoryStats((prev) => ({
+        ...prev,
+        [category]: {
+          correct: (prev[category]?.correct || 0) + 1,
+          total: (prev[category]?.total || 0) + 1,
+        },
+      }));
+
+      // Check for achievements
+      if (streak + 1 === 5) unlockAchievement("hot-streak-5");
+      if (streak + 1 === 10) unlockAchievement("hot-streak-10");
+      if (timeSpent < 3) unlockAchievement("speed-demon");
     } else {
       setFeedback(
         "Wrong! Correct answer: " + questions[currentQuestion]?.answer,
       );
       setStreak(0);
+      setBonusPoints(0);
+
+      // Play incorrect sound
+      if (soundEnabled && incorrectSoundRef.current) {
+        incorrectSoundRef.current.currentTime = 0;
+        incorrectSoundRef.current.play().catch(() => {});
+      }
+
+      // Update category stats
+      const category = questions[currentQuestion]?.category || "Unknown";
+      setCategoryStats((prev) => ({
+        ...prev,
+        [category]: {
+          correct: prev[category]?.correct || 0,
+          total: (prev[category]?.total || 0) + 1,
+        },
+      }));
     }
     setAnswered(true);
     setIsAnimating(true);
@@ -496,9 +667,15 @@ export default function Home() {
   };
 
   const hint = () => {
-    if (!answered && hintsUsed < 1) {
+    const hintLimit = difficultySettings[difficulty].hintLimit;
+    if (
+      !answered &&
+      hintsUsed < hintLimit &&
+      questions[currentQuestion].options.length > 2
+    ) {
       const q = questions[currentQuestion];
       const wrongOptions = q.options.filter((o) => o !== q.answer);
+      if (wrongOptions.length === 0) return;
       const toRemove =
         wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
       setQuestions((prev) => {
@@ -509,7 +686,56 @@ export default function Home() {
         return newQs;
       });
       setHintsUsed(hintsUsed + 1);
+      setHintsUsedTotal((prev) => prev + 1);
+      // Play hint sound
+      if (soundEnabled && timerSoundRef.current) {
+        timerSoundRef.current.currentTime = 0;
+        timerSoundRef.current.play().catch(() => {});
+      }
     }
+  };
+
+  const skipQuestion = () => {
+    if (skipsRemaining > 0 && !answered) {
+      setSkipsRemaining((prev) => prev - 1);
+      setSelectedAnswers((prev) => {
+        const newArr = [...prev];
+        newArr[currentQuestion] = "SKIPPED";
+        return newArr;
+      });
+      setQuestionTimes((prev) => [...prev, 30 - timeLeft]);
+      nextQuestion();
+    }
+  };
+
+  const unlockAchievement = (achievementId: string) => {
+    if (!achievements.includes(achievementId)) {
+      setAchievements((prev) => [...prev, achievementId]);
+      setShowAchievementPopup(achievementId);
+      // Play achievement sound
+      if (soundEnabled && correctSoundRef.current) {
+        correctSoundRef.current.currentTime = 0;
+        correctSoundRef.current.play().catch(() => {});
+      }
+      setTimeout(() => setShowAchievementPopup(null), 3000);
+    }
+  };
+
+  const calculateTimeBonus = (timeRemaining: number): number => {
+    // Bonus points for fast answers
+    if (timeRemaining >= 25) return 50; // Super fast
+    if (timeRemaining >= 20) return 30;
+    if (timeRemaining >= 15) return 20;
+    if (timeRemaining >= 10) return 10;
+    return 0;
+  };
+
+  const getStreakMultiplier = (currentStreak: number): number => {
+    if (currentStreak >= 10) return 3;
+    if (currentStreak >= 7) return 2.5;
+    if (currentStreak >= 5) return 2;
+    if (currentStreak >= 3) return 1.5;
+    return 1;
   };
 
   const togglePause = () => {
@@ -521,6 +747,24 @@ export default function Home() {
     localStorage.removeItem("quizHighScore");
     setFeedback("High score reset.");
     setTimeout(() => setFeedback(""), 1200);
+  };
+
+  const addToLeaderboard = (name: string, score: number) => {
+    const newEntry = { name, score, date: new Date().toISOString() };
+    const updated = [...leaderboard, newEntry]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+    setLeaderboard(updated);
+    localStorage.setItem("quizLeaderboard", JSON.stringify(updated));
+  };
+
+  const checkLeaderboard = (score: number) => {
+    if (
+      leaderboard.length < 10 ||
+      score > leaderboard[leaderboard.length - 1].score
+    ) {
+      setShowNameInput(true);
+    }
   };
 
   const saveProgress = () => {
@@ -602,11 +846,20 @@ export default function Home() {
     setSelectedAnswer(null);
     setHintsUsed(0);
     setShowExplanation(false);
+    setBonusPoints(0);
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      setTimeLeft(30);
+      setTimeLeft(difficultySettings[difficulty].time);
     } else {
       setShowResults(true);
+      // Check for end-of-quiz achievements
+      unlockAchievement("first-quiz");
+      if (score === questions.length && questions.length > 0)
+        unlockAchievement("perfect-score");
+      if (hintsUsedTotal === 0) unlockAchievement("no-hints");
+      if (totalPoints > 500) unlockAchievement("high-scorer");
+      if (questions.length >= 20) unlockAchievement("marathon");
+
       if (score > highScore) {
         setHighScore(score);
         localStorage.setItem("quizHighScore", score.toString());
@@ -621,7 +874,7 @@ export default function Home() {
     setCurrentQuestion(0);
     setScore(0);
     setShowResults(false);
-    setTimeLeft(30);
+    setTimeLeft(difficultySettings[difficulty].time);
     setFeedback("");
     setAnswered(false);
     setSelectedAnswer(null);
@@ -634,6 +887,36 @@ export default function Home() {
     setIsAnimating(false);
     setSelectedAnswers([]);
     setReviewMode(false);
+    setTotalPoints(0);
+    setSkipsRemaining(2);
+    setBonusPoints(0);
+    setHintsUsedTotal(0);
+    setFastestAnswer(null);
+  };
+
+  const saveToLeaderboard = (name: string) => {
+    const newEntry = {
+      name: name || "Anonymous",
+      score,
+      date: new Date().toLocaleDateString(),
+    };
+    const updatedLeaderboard = [...leaderboard, newEntry]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+    setLeaderboard(updatedLeaderboard);
+    localStorage.setItem("quizLeaderboard", JSON.stringify(updatedLeaderboard));
+    setShowNameInput(false);
+    setPlayerName("");
+    setFeedback("Score saved to leaderboard!");
+    setTimeout(() => setFeedback(""), 1200);
+  };
+
+  const handleSubmitScore = () => {
+    if (playerName.trim()) {
+      saveToLeaderboard(playerName);
+    } else {
+      saveToLeaderboard("Anonymous");
+    }
   };
 
   if (!quizStarted) {
@@ -707,9 +990,58 @@ export default function Home() {
                 className="text-white mx-auto mb-3 group-hover:scale-110 transition-transform"
                 size={32}
               />
-              <p className="text-2xl font-bold text-white">30s</p>
+              <p className="text-2xl font-bold text-white">
+                {difficultySettings[difficulty].time}s
+              </p>
               <p className="text-emerald-100 text-sm">Per Question</p>
             </div>
+          </div>
+
+          {/* Difficulty Selector */}
+          <div className="mb-8 w-full">
+            <h3 className="text-lg font-bold text-gray-700 mb-4 text-center flex items-center justify-center gap-2">
+              <Gauge size={20} className="text-purple-500" />
+              Select Difficulty
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {(["easy", "medium", "hard"] as Difficulty[]).map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setDifficulty(diff)}
+                  className={`p-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
+                    difficulty === diff
+                      ? diff === "easy"
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30"
+                        : diff === "medium"
+                          ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg shadow-yellow-500/30"
+                          : "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  <div className="text-lg capitalize">{diff}</div>
+                  <div className="text-xs opacity-80 mt-1">
+                    {difficultySettings[diff].time}s •{" "}
+                    {difficultySettings[diff].hintLimit} hints •{" "}
+                    {difficultySettings[diff].pointMultiplier}x pts
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sound Toggle */}
+          <div className="mb-6 flex justify-center">
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                soundEnabled
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              Sound {soundEnabled ? "On" : "Off"}
+            </button>
           </div>
 
           <div className="flex items-center justify-center mb-8 p-5 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 rounded-2xl shadow-lg shadow-amber-400/30 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
@@ -829,9 +1161,12 @@ export default function Home() {
               setQuestions(toUse);
               setCurrentQuestion(0);
               setScore(0);
-              setTimeLeft(30);
+              setTimeLeft(difficultySettings[difficulty].time);
               setTotalTime(0);
               setQuestionTimes([]);
+              setTotalPoints(0);
+              setSkipsRemaining(2);
+              setHintsUsedTotal(0);
               setQuizStarted(true);
             }}
             disabled={availableQuestions.length === 0}
@@ -956,6 +1291,16 @@ export default function Home() {
             <h2 id="stats-heading" className="sr-only">
               Quiz Statistics
             </h2>
+            <div className="group bg-gradient-to-br from-amber-500 to-orange-600 p-5 rounded-2xl shadow-lg shadow-amber-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 col-span-2">
+              <Gift
+                className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
+                size={32}
+              />
+              <p className="text-4xl font-bold text-white">{totalPoints} pts</p>
+              <p className="text-amber-100 text-sm">
+                Total Points ({difficulty.toUpperCase()} Mode)
+              </p>
+            </div>
             <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <Trophy
                 className="text-white/90 mx-auto mb-2 group-hover:scale-110 transition-transform"
@@ -964,7 +1309,7 @@ export default function Home() {
               <p className="text-3xl font-bold text-white">
                 {score}/{questions.length}
               </p>
-              <p className="text-blue-100 text-sm">Score</p>
+              <p className="text-blue-100 text-sm">Correct</p>
             </div>
             <div className="group bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <TrendingUp
@@ -995,6 +1340,83 @@ export default function Home() {
             </div>
           </div>
 
+          {achievements.length > 0 && (
+            <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl mb-6 border border-white/20 shadow-xl shadow-yellow-500/10">
+              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                <Star className="text-yellow-400" size={24} />
+                Achievements Unlocked
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {achievements.map((achievement) => (
+                  <div
+                    key={achievement}
+                    className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 p-4 rounded-xl border border-yellow-400/30 text-center hover:border-yellow-400/60 transition-all"
+                  >
+                    {achievement === "hot-streak-5" && (
+                      <>
+                        <p className="text-2xl mb-2">🔥</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Hot Streak
+                        </p>
+                        <p className="text-xs text-yellow-200">5 correct</p>
+                      </>
+                    )}
+                    {achievement === "hot-streak-10" && (
+                      <>
+                        <p className="text-2xl mb-2">🌟</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Unstoppable
+                        </p>
+                        <p className="text-xs text-yellow-200">10 correct</p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {Object.keys(categoryStats).length > 0 && (
+            <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl mb-6 border border-white/20 shadow-xl shadow-blue-500/10">
+              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                <Target className="text-blue-400" size={24} />
+                Category Performance
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(categoryStats).map(([category, stats]) => {
+                  const percentage =
+                    stats.total > 0
+                      ? Math.round((stats.correct / stats.total) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={category}
+                      className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-3 rounded-lg border border-blue-400/30"
+                    >
+                      <p className="font-semibold text-blue-200 text-sm">
+                        {category}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-blue-100">
+                          {stats.correct}/{stats.total}
+                        </p>
+                        <p className="text-lg font-bold text-blue-300">
+                          {percentage}%
+                        </p>
+                      </div>
+                      <div className="mt-2 bg-blue-900/30 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-400 to-cyan-400 h-full"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 p-5 rounded-2xl mb-6 shadow-lg shadow-amber-400/30">
             <Star
               className="text-white mx-auto mb-2 animate-spin"
@@ -1008,6 +1430,93 @@ export default function Home() {
               ⏱️ Avg. time per question: {averageTime}s
             </p>
           </div>
+
+          {!showNameInput ? (
+            <button
+              onClick={() => setShowNameInput(true)}
+              className="group w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-4 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center text-lg font-bold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden mb-4"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              <Trophy
+                className="mr-3 group-hover:scale-110 transition-transform"
+                size={20}
+              />
+              💾 Save to Leaderboard
+            </button>
+          ) : (
+            <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl mb-4 border border-white/20">
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Enter your name (optional)"
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") handleSubmitScore();
+                }}
+                className="w-full p-3 rounded-lg bg-white/90 text-gray-800 placeholder-gray-400 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSubmitScore}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-bold transition-all"
+                >
+                  Save Score
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNameInput(false);
+                    setPlayerName("");
+                  }}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowLeaderboard(!showLeaderboard)}
+            className="group w-full bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 text-white py-4 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center text-lg font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 transform hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden mb-4"
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+            <Award
+              className="mr-3 group-hover:scale-110 transition-transform"
+              size={20}
+            />
+            🏆 View Leaderboard
+          </button>
+
+          {showLeaderboard && leaderboard.length > 0 && (
+            <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl mb-4 border border-white/20 max-h-80 overflow-y-auto">
+              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                <Trophy className="text-yellow-400" size={24} />
+                Top Scores
+              </h3>
+              <div className="space-y-3">
+                {leaderboard.map((entry, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-white/10 p-3 rounded-lg border border-white/10 hover:bg-white/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl font-bold text-yellow-400">
+                        #{idx + 1}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-white">{entry.name}</p>
+                        <p className="text-xs text-gray-300">{entry.date}</p>
+                      </div>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-400">
+                      {entry.score} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             onClick={restartQuiz}
@@ -1173,7 +1682,8 @@ export default function Home() {
 
   const q = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const timerPercentage = (timeLeft / 30) * 100;
+  const maxTime = difficultySettings[difficulty].time;
+  const timerPercentage = (timeLeft / maxTime) * 100;
   const isLowTime = timeLeft <= 10;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
@@ -1195,19 +1705,26 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-white/60 text-xs uppercase tracking-wide">
-                  Score
+                  Points
                 </p>
-                <p className="text-white text-2xl font-bold">{score}</p>
+                <p className="text-white text-2xl font-bold">{totalPoints}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-white/60 text-xs uppercase tracking-wide">
-                  Streak
+                  Streak{" "}
+                  {streak >= 3 && (
+                    <span className="text-yellow-400">
+                      ({getStreakMultiplier(streak)}x)
+                    </span>
+                  )}
                 </p>
                 <p className="text-white text-2xl font-bold flex items-center justify-end">
                   {streak}
-                  {streak >= 3 && <span className="ml-1">🔥</span>}
+                  {streak >= 3 && (
+                    <Flame className="ml-1 text-orange-400" size={20} />
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-xl p-3 shadow-lg shadow-orange-500/30">
@@ -1215,23 +1732,22 @@ export default function Home() {
               </div>
               <div className="flex items-center space-x-1">
                 <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="text-xs font-medium bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all border border-white/10"
+                >
+                  {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                </button>
+                <button
                   onClick={togglePause}
                   className="text-xs font-medium bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all border border-white/10"
                 >
-                  {paused ? "▶️ Resume" : "⏸️ Pause"}
+                  {paused ? "▶️" : "⏸️"}
                 </button>
                 <button
                   onClick={saveProgress}
                   className="text-xs font-medium bg-white/10 text-white px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all border border-white/10"
                 >
                   💾
-                </button>
-                <button
-                  onClick={loadProgress}
-                  disabled={!hasSavedProgress}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all border border-white/10 ${hasSavedProgress ? "bg-white/10 text-white hover:bg-white/20" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
-                >
-                  📂
                 </button>
               </div>
             </div>
@@ -1380,19 +1896,38 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Hint Button */}
-          {!answered && hintsUsed < 1 && (
-            <button
-              onClick={hint}
-              className="group w-full bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 mb-4 relative overflow-hidden"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <Lightbulb
-                className="mr-3 group-hover:rotate-12 transition-transform"
-                size={22}
-              />
-              💡 Use Hint (Remove 1 wrong option)
-            </button>
+          {/* Hint and Skip Buttons */}
+          {!answered && (
+            <div className="flex gap-3 mb-4">
+              {hintsUsed < difficultySettings[difficulty].hintLimit &&
+                questions[currentQuestion].options.length > 2 && (
+                  <button
+                    onClick={hint}
+                    className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
+                  >
+                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                    <Lightbulb
+                      className="mr-2 group-hover:rotate-12 transition-transform"
+                      size={20}
+                    />
+                    💡 Hint (
+                    {difficultySettings[difficulty].hintLimit - hintsUsed} left)
+                  </button>
+                )}
+              {skipsRemaining > 0 && (
+                <button
+                  onClick={skipQuestion}
+                  className="group flex-1 bg-gradient-to-r from-gray-400 via-slate-500 to-gray-600 text-white py-4 px-6 rounded-2xl hover:from-gray-500 hover:via-slate-600 hover:to-gray-700 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-gray-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                  <SkipForward
+                    className="mr-2 group-hover:translate-x-1 transition-transform"
+                    size={20}
+                  />
+                  ⏩ Skip ({skipsRemaining} left)
+                </button>
+              )}
+            </div>
           )}
 
           {/* Explanation */}
@@ -1428,6 +1963,57 @@ export default function Home() {
         {showConfetti && (
           <Confetti width={dimensions.width} height={dimensions.height} />
         )}
+
+        {/* Achievement Popup */}
+        {showAchievementPopup &&
+          achievementsList[
+            showAchievementPopup as keyof typeof achievementsList
+          ] && (
+            <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4">
+              <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 px-8 py-4 rounded-2xl shadow-2xl shadow-amber-500/50 flex items-center gap-4">
+                <div className="text-4xl">
+                  {
+                    achievementsList[
+                      showAchievementPopup as keyof typeof achievementsList
+                    ].icon
+                  }
+                </div>
+                <div>
+                  <p className="text-white font-bold text-lg">
+                    🏆 Achievement Unlocked!
+                  </p>
+                  <p className="text-yellow-100">
+                    {
+                      achievementsList[
+                        showAchievementPopup as keyof typeof achievementsList
+                      ].name
+                    }
+                  </p>
+                </div>
+                <Medal className="text-white" size={32} />
+              </div>
+            </div>
+          )}
+
+        {/* Audio Elements */}
+        <audio ref={correctSoundRef} preload="auto">
+          <source
+            src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQAjhq+1nFU="
+            type="audio/wav"
+          />
+        </audio>
+        <audio ref={incorrectSoundRef} preload="auto">
+          <source
+            src="data:audio/wav;base64,UklGRl9vT19teleQAjhq+1nFUAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDb"
+            type="audio/wav"
+          />
+        </audio>
+        <audio ref={timerSoundRef} preload="auto">
+          <source
+            src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAqB8AAKAfAAABAAgAZGF0YQoGAACBhYqFbF0="
+            type="audio/wav"
+          />
+        </audio>
       </div>
     </div>
   );
