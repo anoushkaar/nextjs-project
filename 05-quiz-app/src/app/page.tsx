@@ -400,6 +400,9 @@ export default function Home() {
   const [categoryStats, setCategoryStats] = useState<
     Record<string, { correct: number; total: number }>
   >({});
+  const [hiddenOptions, setHiddenOptions] = useState<Record<number, string[]>>(
+    {},
+  );
   const autoAdvanceRef = useRef<number | null>(null);
 
   // Audio elements for sound effects
@@ -525,14 +528,24 @@ export default function Home() {
       if (key >= "a" && key <= "d") {
         const idx = key.charCodeAt(0) - "a".charCodeAt(0);
         const q = questions[currentQuestion];
-        if (q && q.options[idx]) {
-          handleAnswer(q.options[idx]);
+        const visibleOptions = q.options.filter(
+          (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
+        );
+        if (q && visibleOptions[idx]) {
+          handleAnswer(visibleOptions[idx]);
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [quizStarted, showResults, answered, questions, currentQuestion]);
+  }, [
+    quizStarted,
+    showResults,
+    answered,
+    questions,
+    currentQuestion,
+    hiddenOptions,
+  ]);
 
   // additional keyboard shortcuts: P pause/resume, S save, L load, H reset high score
   useEffect(() => {
@@ -674,17 +687,18 @@ export default function Home() {
       questions[currentQuestion].options.length > 2
     ) {
       const q = questions[currentQuestion];
-      const wrongOptions = q.options.filter((o) => o !== q.answer);
+      const visibleOptions = q.options.filter(
+        (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
+      );
+      if (visibleOptions.length <= 2) return; // already at minimum
+      const wrongOptions = visibleOptions.filter((o) => o !== q.answer);
       if (wrongOptions.length === 0) return;
-      const toRemove =
+      const toHide =
         wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
-      setQuestions((prev) => {
-        const newQs = [...prev];
-        newQs[currentQuestion].options = newQs[currentQuestion].options.filter(
-          (o) => o !== toRemove,
-        );
-        return newQs;
-      });
+      setHiddenOptions((prev) => ({
+        ...prev,
+        [currentQuestion]: [...(prev[currentQuestion] || []), toHide],
+      }));
       setHintsUsed(hintsUsed + 1);
       setHintsUsedTotal((prev) => prev + 1);
       // Play hint sound
@@ -786,6 +800,7 @@ export default function Home() {
       questionCount,
       selectedAnswers,
       reviewMode,
+      hiddenOptions,
     };
     try {
       localStorage.setItem("quizProgress", JSON.stringify(payload));
@@ -829,6 +844,8 @@ export default function Home() {
       if (Array.isArray(p.selectedAnswers))
         setSelectedAnswers(p.selectedAnswers);
       if (typeof p.reviewMode === "boolean") setReviewMode(p.reviewMode);
+      if (p.hiddenOptions && typeof p.hiddenOptions === "object")
+        setHiddenOptions(p.hiddenOptions);
       setFeedback("Progress loaded.");
       setTimeout(() => setFeedback(""), 1200);
     } catch (e) {
@@ -892,6 +909,7 @@ export default function Home() {
     setBonusPoints(0);
     setHintsUsedTotal(0);
     setFastestAnswer(null);
+    setHiddenOptions({});
   };
 
   const saveToLeaderboard = (name: string) => {
@@ -1855,65 +1873,79 @@ export default function Home() {
 
           {/* Options */}
           <div className="space-y-3 mb-6">
-            {q.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleAnswer(option)}
-                disabled={answered}
-                className={`group w-full p-5 rounded-2xl transition-all duration-300 text-left font-semibold flex items-center ${
-                  answered
-                    ? option === q.answer
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]"
-                      : option === selectedAnswer
-                        ? "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xl shadow-red-500/30"
-                        : "bg-gray-100 text-gray-400"
-                    : "bg-white hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 text-gray-700 border-2 border-gray-200 hover:border-purple-300 hover:shadow-lg transform hover:scale-[1.02] hover:-translate-y-0.5"
-                } disabled:cursor-not-allowed`}
-              >
-                <span
-                  className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm mr-4 flex-shrink-0 transition-all ${
+            {q.options
+              .filter(
+                (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
+              )
+              .map((option, index) => (
+                <button
+                  key={option}
+                  onClick={() => handleAnswer(option)}
+                  disabled={answered}
+                  className={`group w-full p-5 rounded-2xl transition-all duration-300 text-left font-semibold flex items-center ${
                     answered
                       ? option === q.answer
-                        ? "bg-white/20 text-white"
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]"
                         : option === selectedAnswer
-                          ? "bg-white/20 text-white"
-                          : "bg-gray-200 text-gray-400"
-                      : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white group-hover:scale-110 shadow-lg"
-                  }`}
+                          ? "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xl shadow-red-500/30"
+                          : "bg-gray-100 text-gray-400"
+                      : "bg-white hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 text-gray-700 border-2 border-gray-200 hover:border-purple-300 hover:shadow-lg transform hover:scale-[1.02] hover:-translate-y-0.5"
+                  } disabled:cursor-not-allowed`}
                 >
-                  {String.fromCharCode(65 + index)}
-                </span>
-                <span className="flex-1">{option}</span>
-                {answered && option === q.answer && (
-                  <CheckCircle className="text-white ml-2" size={24} />
-                )}
-                {answered &&
-                  option === selectedAnswer &&
-                  option !== q.answer && (
-                    <XCircle className="text-white ml-2" size={24} />
+                  <span
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm mr-4 flex-shrink-0 transition-all ${
+                      answered
+                        ? option === q.answer
+                          ? "bg-white/20 text-white"
+                          : option === selectedAnswer
+                            ? "bg-white/20 text-white"
+                            : "bg-gray-200 text-gray-400"
+                        : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white group-hover:scale-110 shadow-lg"
+                    }`}
+                  >
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span className="flex-1">{option}</span>
+                  {answered && option === q.answer && (
+                    <CheckCircle className="text-white ml-2" size={24} />
                   )}
-              </button>
-            ))}
+                  {answered &&
+                    option === selectedAnswer &&
+                    option !== q.answer && (
+                      <XCircle className="text-white ml-2" size={24} />
+                    )}
+                </button>
+              ))}
           </div>
 
           {/* Hint and Skip Buttons */}
           {!answered && (
             <div className="flex gap-3 mb-4">
-              {hintsUsed < difficultySettings[difficulty].hintLimit &&
-                questions[currentQuestion].options.length > 2 && (
-                  <button
-                    onClick={hint}
-                    className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
-                  >
-                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                    <Lightbulb
-                      className="mr-2 group-hover:rotate-12 transition-transform"
-                      size={20}
-                    />
-                    💡 Hint (
-                    {difficultySettings[difficulty].hintLimit - hintsUsed} left)
-                  </button>
-                )}
+              {(() => {
+                const visibleOptions = questions[
+                  currentQuestion
+                ].options.filter(
+                  (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
+                );
+                return (
+                  hintsUsed < difficultySettings[difficulty].hintLimit &&
+                  visibleOptions.length > 2 && (
+                    <button
+                      onClick={hint}
+                      className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
+                    >
+                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                      <Lightbulb
+                        className="mr-2 group-hover:rotate-12 transition-transform"
+                        size={20}
+                      />
+                      💡 Hint (
+                      {difficultySettings[difficulty].hintLimit - hintsUsed}{" "}
+                      left)
+                    </button>
+                  )
+                );
+              })()}
               {skipsRemaining > 0 && (
                 <button
                   onClick={skipQuestion}
