@@ -36,11 +36,11 @@ type Difficulty = "easy" | "medium" | "hard";
 
 const difficultySettings: Record<
   Difficulty,
-  { time: number; hintLimit: number; pointMultiplier: number }
+  { time: number; totalHints: number; pointMultiplier: number }
 > = {
-  easy: { time: 45, hintLimit: 3, pointMultiplier: 1 },
-  medium: { time: 30, hintLimit: 2, pointMultiplier: 1.5 },
-  hard: { time: 15, hintLimit: 1, pointMultiplier: 2 },
+  easy: { time: 45, totalHints: 15, pointMultiplier: 1 },
+  medium: { time: 30, totalHints: 10, pointMultiplier: 1.5 },
+  hard: { time: 15, totalHints: 5, pointMultiplier: 2 },
 };
 
 const achievementsList = {
@@ -679,28 +679,28 @@ export default function Home() {
     }, 1400);
   };
 
-  const hint = () => {
-    const hintLimit = difficultySettings[difficulty].hintLimit;
+  const hint = (numToHide: number = 1) => {
+    const totalHints = difficultySettings[difficulty].totalHints;
     if (
       !answered &&
-      hintsUsed < hintLimit &&
+      hintsUsedTotal + numToHide <= totalHints &&
       questions[currentQuestion].options.length > 2
     ) {
       const q = questions[currentQuestion];
       const visibleOptions = q.options.filter(
         (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
       );
-      if (visibleOptions.length <= 2) return; // already at minimum
+      if (visibleOptions.length <= numToHide + 1) return; // need at least one correct + numToHide wrong
       const wrongOptions = visibleOptions.filter((o) => o !== q.answer);
-      if (wrongOptions.length === 0) return;
-      const toHide =
-        wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+      if (wrongOptions.length < numToHide) return;
+      // Shuffle wrong options and take first numToHide
+      const shuffledWrong = shuffleStrings([...wrongOptions]);
+      const toHide = shuffledWrong.slice(0, numToHide);
       setHiddenOptions((prev) => ({
         ...prev,
-        [currentQuestion]: [...(prev[currentQuestion] || []), toHide],
+        [currentQuestion]: [...(prev[currentQuestion] || []), ...toHide],
       }));
-      setHintsUsed(hintsUsed + 1);
-      setHintsUsedTotal((prev) => prev + 1);
+      setHintsUsedTotal((prev) => prev + numToHide);
       // Play hint sound
       if (soundEnabled && timerSoundRef.current) {
         timerSoundRef.current.currentTime = 0;
@@ -1039,7 +1039,7 @@ export default function Home() {
                   <div className="text-lg capitalize">{diff}</div>
                   <div className="text-xs opacity-80 mt-1">
                     {difficultySettings[diff].time}s •{" "}
-                    {difficultySettings[diff].hintLimit} hints •{" "}
+                    {difficultySettings[diff].totalHints} hints •{" "}
                     {difficultySettings[diff].pointMultiplier}x pts
                   </div>
                 </button>
@@ -1728,7 +1728,7 @@ export default function Home() {
                 <p className="text-white text-2xl font-bold">{totalPoints}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="text-right">
                 <p className="text-white/60 text-xs uppercase tracking-wide">
                   Streak{" "}
@@ -1747,6 +1747,17 @@ export default function Home() {
               </div>
               <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-xl p-3 shadow-lg shadow-orange-500/30">
                 <Zap className="text-white" size={22} />
+              </div>
+              <div className="text-right">
+                <p className="text-white/60 text-xs uppercase tracking-wide">
+                  Hints
+                </p>
+                <p className="text-white text-2xl font-bold">
+                  {difficultySettings[difficulty].totalHints - hintsUsedTotal}
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-3 shadow-lg shadow-yellow-500/30">
+                <Lightbulb className="text-white" size={22} />
               </div>
               <div className="flex items-center space-x-1">
                 <button
@@ -1928,22 +1939,38 @@ export default function Home() {
                   (o) => !(hiddenOptions[currentQuestion] || []).includes(o),
                 );
                 return (
-                  hintsUsed < difficultySettings[difficulty].hintLimit &&
-                  visibleOptions.length > 2 && (
-                    <button
-                      onClick={hint}
-                      className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                      <Lightbulb
-                        className="mr-2 group-hover:rotate-12 transition-transform"
-                        size={20}
-                      />
-                      💡 Hint (
-                      {difficultySettings[difficulty].hintLimit - hintsUsed}{" "}
-                      left)
-                    </button>
-                  )
+                  <>
+                    {hintsUsedTotal + 1 <=
+                      difficultySettings[difficulty].totalHints &&
+                      visibleOptions.length > 2 && (
+                        <button
+                          onClick={hint}
+                          className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
+                        >
+                          <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                          <Lightbulb
+                            className="mr-2 group-hover:rotate-12 transition-transform"
+                            size={20}
+                          />
+                          💡 Hint (1)
+                        </button>
+                      )}
+                    {hintsUsedTotal + 2 <=
+                      difficultySettings[difficulty].totalHints &&
+                      visibleOptions.length > 3 && (
+                        <button
+                          onClick={() => hint(2)}
+                          className="group flex-1 bg-gradient-to-r from-red-400 via-pink-400 to-rose-400 text-white py-4 px-6 rounded-2xl hover:from-red-500 hover:via-pink-500 hover:to-rose-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-red-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
+                        >
+                          <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                          <Zap
+                            className="mr-2 group-hover:rotate-12 transition-transform"
+                            size={20}
+                          />
+                          50/50 (2)
+                        </button>
+                      )}
+                  </>
                 );
               })()}
               {skipsRemaining > 0 && (
