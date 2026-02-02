@@ -36,11 +36,11 @@ type Difficulty = "easy" | "medium" | "hard";
 
 const difficultySettings: Record<
   Difficulty,
-  { time: number; totalHints: number; pointMultiplier: number }
+  { time: number; hintsPerQuestion: number; pointMultiplier: number }
 > = {
-  easy: { time: 45, totalHints: 15, pointMultiplier: 1 },
-  medium: { time: 30, totalHints: 10, pointMultiplier: 1.5 },
-  hard: { time: 15, totalHints: 5, pointMultiplier: 2 },
+  easy: { time: 45, hintsPerQuestion: 2, pointMultiplier: 1 },
+  medium: { time: 30, hintsPerQuestion: 1, pointMultiplier: 1.5 },
+  hard: { time: 15, hintsPerQuestion: 0, pointMultiplier: 2 },
 };
 
 const achievementsList = {
@@ -384,6 +384,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [totalPoints, setTotalPoints] = useState(0);
   const [skipsRemaining, setSkipsRemaining] = useState(2);
+  const [timeFreezesRemaining, setTimeFreezesRemaining] = useState(1);
   const [bonusPoints, setBonusPoints] = useState(0);
   const [showAchievementPopup, setShowAchievementPopup] = useState<
     string | null
@@ -642,6 +643,7 @@ export default function Home() {
       if (streak + 1 === 5) unlockAchievement("hot-streak-5");
       if (streak + 1 === 10) unlockAchievement("hot-streak-10");
       if (timeSpent < 3) unlockAchievement("speed-demon");
+      if (timeSpent < 1) unlockAchievement("lightning-fast");
     } else {
       setFeedback(
         "Wrong! Correct answer: " + questions[currentQuestion]?.answer,
@@ -680,10 +682,10 @@ export default function Home() {
   };
 
   const hint = (numToHide: number = 1) => {
-    const totalHints = difficultySettings[difficulty].totalHints;
+    const hintsPerQuestion = difficultySettings[difficulty].hintsPerQuestion;
     if (
       !answered &&
-      hintsUsedTotal + numToHide <= totalHints &&
+      hintsUsed + numToHide <= hintsPerQuestion &&
       questions[currentQuestion].options.length > 2
     ) {
       const q = questions[currentQuestion];
@@ -700,6 +702,7 @@ export default function Home() {
         ...prev,
         [currentQuestion]: [...(prev[currentQuestion] || []), ...toHide],
       }));
+      setHintsUsed((prev) => prev + numToHide);
       setHintsUsedTotal((prev) => prev + numToHide);
       // Play hint sound
       if (soundEnabled && timerSoundRef.current) {
@@ -876,6 +879,11 @@ export default function Home() {
       if (hintsUsedTotal === 0) unlockAchievement("no-hints");
       if (totalPoints > 500) unlockAchievement("high-scorer");
       if (questions.length >= 20) unlockAchievement("marathon");
+      if (skipsRemaining === 2) unlockAchievement("no-skips");
+      if (maxStreak >= 15) unlockAchievement("legendary-streak");
+      if (score === questions.length && difficulty === "hard")
+        unlockAchievement("hard-perfectionist");
+      if (totalTime < questions.length * 10) unlockAchievement("speed-runner");
 
       if (score > highScore) {
         setHighScore(score);
@@ -906,6 +914,7 @@ export default function Home() {
     setReviewMode(false);
     setTotalPoints(0);
     setSkipsRemaining(2);
+    setTimeFreezesRemaining(1);
     setBonusPoints(0);
     setHintsUsedTotal(0);
     setFastestAnswer(null);
@@ -1039,7 +1048,7 @@ export default function Home() {
                   <div className="text-lg capitalize">{diff}</div>
                   <div className="text-xs opacity-80 mt-1">
                     {difficultySettings[diff].time}s •{" "}
-                    {difficultySettings[diff].totalHints} hints •{" "}
+                    {difficultySettings[diff].hintsPerQuestion} hints •{" "}
                     {difficultySettings[diff].pointMultiplier}x pts
                   </div>
                 </button>
@@ -1185,6 +1194,7 @@ export default function Home() {
               setTotalPoints(0);
               setSkipsRemaining(2);
               setHintsUsedTotal(0);
+              setTimeFreezesRemaining(1);
               setQuizStarted(true);
             }}
             disabled={availableQuestions.length === 0}
@@ -1386,6 +1396,73 @@ export default function Home() {
                           Unstoppable
                         </p>
                         <p className="text-xs text-yellow-200">10 correct</p>
+                      </>
+                    )}
+                    {achievement === "no-hints" && (
+                      <>
+                        <p className="text-2xl mb-2">🧠</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Genius
+                        </p>
+                        <p className="text-xs text-yellow-200">No hints used</p>
+                      </>
+                    )}
+                    {achievement === "no-skips" && (
+                      <>
+                        <p className="text-2xl mb-2">🚫</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Brave
+                        </p>
+                        <p className="text-xs text-yellow-200">No skips used</p>
+                      </>
+                    )}
+                    {achievement === "legendary-streak" && (
+                      <>
+                        <p className="text-2xl mb-2">👑</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Legendary
+                        </p>
+                        <p className="text-xs text-yellow-200">15+ streak</p>
+                      </>
+                    )}
+                    {achievement === "hard-perfectionist" && (
+                      <>
+                        <p className="text-2xl mb-2">💎</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Perfectionist
+                        </p>
+                        <p className="text-xs text-yellow-200">
+                          Hard mode perfect
+                        </p>
+                      </>
+                    )}
+                    {achievement === "speed-runner" && (
+                      <>
+                        <p className="text-2xl mb-2">🏃</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Speed Runner
+                        </p>
+                        <p className="text-xs text-yellow-200">
+                          Fast completion
+                        </p>
+                      </>
+                    )}
+                    {achievement === "speed-demon" && (
+                      <>
+                        <p className="text-2xl mb-2">⚡</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Speed Demon
+                        </p>
+                        <p className="text-xs text-yellow-200">&lt;3s answer</p>
+                      </>
+                    )}
+                    {achievement === "lightning-fast" && (
+                      <>
+                        <p className="text-2xl mb-2">🌩️</p>
+                        <p className="font-bold text-yellow-300 text-sm">
+                          Lightning Fast
+                        </p>
+                        <p className="text-xs text-yellow-200">&lt;1s answer</p>
                       </>
                     )}
                   </div>
@@ -1753,7 +1830,7 @@ export default function Home() {
                   Hints
                 </p>
                 <p className="text-white text-2xl font-bold">
-                  {difficultySettings[difficulty].totalHints - hintsUsedTotal}
+                  {difficultySettings[difficulty].hintsPerQuestion - hintsUsed}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-3 shadow-lg shadow-yellow-500/30">
@@ -1940,11 +2017,11 @@ export default function Home() {
                 );
                 return (
                   <>
-                    {hintsUsedTotal + 1 <=
-                      difficultySettings[difficulty].totalHints &&
+                    {hintsUsed + 1 <=
+                      difficultySettings[difficulty].hintsPerQuestion &&
                       visibleOptions.length > 2 && (
                         <button
-                          onClick={hint}
+                          onClick={() => hint()}
                           className="group flex-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-white py-4 px-6 rounded-2xl hover:from-amber-500 hover:via-yellow-500 hover:to-orange-500 transition-all duration-300 flex items-center justify-center font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-0.5 relative overflow-hidden"
                         >
                           <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
@@ -1955,8 +2032,8 @@ export default function Home() {
                           💡 Hint (1)
                         </button>
                       )}
-                    {hintsUsedTotal + 2 <=
-                      difficultySettings[difficulty].totalHints &&
+                    {hintsUsed + 2 <=
+                      difficultySettings[difficulty].hintsPerQuestion &&
                       visibleOptions.length > 3 && (
                         <button
                           onClick={() => hint(2)}
